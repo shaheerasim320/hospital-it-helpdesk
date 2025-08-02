@@ -1,11 +1,11 @@
-"use client"
-
-import { useState, useEffect } from "react"
-import { useSearchParams, useRouter } from "next/navigation"
-import Link from "next/link"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Alert, AlertDescription } from "@/components/ui/alert"
+"use client";
+import React, { Suspense } from "react";
+import { useState, useEffect } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
     Clock,
     CheckCircle,
@@ -17,13 +17,21 @@ import {
     Phone,
     RefreshCw,
     ArrowLeft,
-} from "lucide-react"
+} from "lucide-react";
 
 export default function PendingApproval() {
+    return (
+        <Suspense fallback={<div>Loading...</div>}>
+            <PendingApprovalContent />
+        </Suspense>
+    );
+}
+
+function PendingApprovalContent() {
     const router = useRouter();
-    const searchParams = useSearchParams()
-    const name = searchParams.get("name")
-    const email = searchParams.get("email")
+    const searchParams = useSearchParams();
+    const name = searchParams.get("name");
+    const email = searchParams.get("email");
 
     useEffect(() => {
         if (!name || !email) {
@@ -31,37 +39,35 @@ export default function PendingApproval() {
         }
     }, [name, email, router]);
 
-    const [timeElapsed, setTimeElapsed] = useState("0 minutes")
-    const [isRefreshing, setIsRefreshing] = useState(false)
+    const [timeElapsed, setTimeElapsed] = useState("0 minutes");
+    const [isRefreshing, setIsRefreshing] = useState(false);
 
     useEffect(() => {
-        const startTime = new Date()
+        const startTime = new Date();
         const interval = setInterval(() => {
-            const now = new Date()
-            const diffInMinutes = Math.floor((now - startTime) / (1000 * 60))
+            const now = new Date();
+            const diffInMinutes = Math.floor((now - startTime) / (1000 * 60));
 
             if (diffInMinutes < 60) {
-                setTimeElapsed(`${diffInMinutes} minute${diffInMinutes !== 1 ? "s" : ""}`)
+                setTimeElapsed(`${diffInMinutes} minute${diffInMinutes !== 1 ? "s" : ""}`);
             } else {
-                const hours = Math.floor(diffInMinutes / 60)
-                const minutes = diffInMinutes % 60
+                const hours = Math.floor(diffInMinutes / 60);
+                const minutes = diffInMinutes % 60;
                 setTimeElapsed(
                     `${hours} hour${hours !== 1 ? "s" : ""} ${minutes > 0 ? `${minutes} minute${minutes !== 1 ? "s" : ""}` : ""}`,
-                )
+                );
             }
-        }, 60000) // Update every minute
+        }, 60000); // Update every minute
 
-        return () => clearInterval(interval)
-    }, [])
+        return () => clearInterval(interval);
+    }, []);
 
     const handleRefreshStatus = () => {
-        setIsRefreshing(true)
-        // Simulate checking status
+        setIsRefreshing(true);
         setTimeout(() => {
-            setIsRefreshing(false)
-            // In a real app, this would check the actual approval status
-        }, 1500)
-    }
+            setIsRefreshing(false);
+        }, 1500);
+    };
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-blue-50 to-green-50 flex items-center justify-center p-4">
@@ -211,54 +217,10 @@ export default function PendingApproval() {
                                     </Button>
                                 </Link>
                             </div>
-
-                            {/* Important Information */}
-                            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                                <div className="flex items-start space-x-3">
-                                    <Shield className="w-5 h-5 text-yellow-600 mt-0.5" />
-                                    <div>
-                                        <p className="text-sm font-medium text-yellow-800 mb-1">Important:</p>
-                                        <ul className="text-sm text-yellow-700 space-y-1">
-                                            <li>• Check your email regularly for approval updates</li>
-                                            <li>• Approval typically takes 1-2 business days</li>
-                                            <li>• Contact IT support if urgent access is needed</li>
-                                        </ul>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Contact Information */}
-                            <div className="pt-4 border-t border-gray-200">
-                                <div className="text-center space-y-2">
-                                    <div className="flex items-center justify-center space-x-2 text-sm text-gray-600">
-                                        <Phone className="w-4 h-4" />
-                                        <span>Need immediate help? Contact IT Support</span>
-                                    </div>
-                                    <p className="text-sm font-medium text-gray-800">Extension: 911</p>
-                                    <p className="text-xs text-gray-500">Available 24/7 for emergency IT support</p>
-                                </div>
-                            </div>
                         </CardContent>
                     </Card>
                 </div>
-
-                {/* Mobile illustration */}
-                <div className="lg:hidden flex flex-col items-center space-y-4 order-first">
-                    <div className="flex items-center space-x-4">
-                        <div className="w-12 h-12 bg-orange-500 rounded-lg flex items-center justify-center animate-pulse">
-                            <Clock className="w-6 h-6 text-white" />
-                        </div>
-                        <div className="w-12 h-12 bg-blue-500 rounded-lg flex items-center justify-center">
-                            <Monitor className="w-6 h-6 text-white" />
-                        </div>
-                        <div className="w-12 h-12 bg-green-500 rounded-lg flex items-center justify-center">
-                            <Stethoscope className="w-6 h-6 text-white" />
-                        </div>
-                    </div>
-                    <h1 className="text-2xl font-bold text-gray-800 text-center">Pending Approval</h1>
-                    <p className="text-sm text-gray-600 text-center">Your request is under review</p>
-                </div>
             </div>
         </div>
-    )
+    );
 }

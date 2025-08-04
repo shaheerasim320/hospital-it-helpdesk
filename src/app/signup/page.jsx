@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Stethoscope, Monitor, Shield, Users, UserPlus, Lock, Mail } from "lucide-react"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 export default function HospitalSignup() {
   const [fullName, setFullName] = useState("")
@@ -48,14 +49,20 @@ export default function HospitalSignup() {
         role: "staff",
         status: "pending",
         createdAt: serverTimestamp(),
-      })
+        lastUpdated: serverTimestamp(),
+      });
+
 
       toast.success("Signup successful! Waiting for admin approval.")
       router.push(`/pending-approval?name=${fullName}&email=${email}`)
 
     } catch (err) {
-      console.error(err)
-      toast.error(err.message)
+      console.error("Signup Error:", err);
+      const msg =
+        err.code === "auth/email-already-in-use"
+          ? "Email already registered"
+          : err.message;
+      toast.error(msg);
     } finally {
       setLoading(false)
     }
@@ -133,16 +140,37 @@ export default function HospitalSignup() {
                 </div>
 
                 {/* Department */}
-                <div className="space-y-2">
+                <div className="space-y-2 w-full">
                   <Label htmlFor="department">Department</Label>
-                  <Input
-                    id="department"
-                    placeholder="Cardiology"
+                  <Select
                     value={department}
-                    onChange={(e) => setDepartment(e.target.value)}
-                    required
-                  />
+                    onValueChange={(value) => setDepartment(value)}
+                  >
+                    <SelectTrigger className="h-11 w-full">
+                      <SelectValue placeholder="Select department" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="emergency">Emergency Medicine</SelectItem>
+                      <SelectItem value="radiology">Radiology</SelectItem>
+                      <SelectItem value="cardiology">Cardiology</SelectItem>
+                      <SelectItem value="neurology">Neurology</SelectItem>
+                      <SelectItem value="oncology">Oncology</SelectItem>
+                      <SelectItem value="orthopedics">Orthopedics</SelectItem>
+                      <SelectItem value="pediatrics">Pediatrics</SelectItem>
+                      <SelectItem value="pharmacy">Pharmacy</SelectItem>
+                      <SelectItem value="laboratory">Laboratory</SelectItem>
+                      <SelectItem value="surgery">Surgery</SelectItem>
+                      <SelectItem value="icu">Intensive Care Unit (ICU)</SelectItem>
+                      <SelectItem value="it">Information Technology (IT)</SelectItem>
+                      <SelectItem value="hr">Human Resources (HR)</SelectItem>
+                      <SelectItem value="administration">Administration</SelectItem>
+                      <SelectItem value="facilities">Facilities & Maintenance</SelectItem>
+                      <SelectItem value="billing">Billing & Insurance</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
+
+
 
                 {/* Email */}
                 <div className="space-y-2">

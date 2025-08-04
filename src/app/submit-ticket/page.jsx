@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -10,31 +10,82 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Monitor, Stethoscope, Shield, Headphones, CheckCircle, AlertCircle } from "lucide-react"
 import Navbar from "../../components/navbar"
+import useAuthStore from "@/store/useAuthStore"
+import useTicketStore from "@/store/useTicketStore"
+import { uploadFilesToStorage } from "../utils/uploadFilesToStorage"
+import { useRouter } from "next/navigation"
 
 export default function SubmitTicket() {
+
   const [formData, setFormData] = useState({
     title: "",
     description: "",
     priority: "",
     department: "",
+    attachments: [],
   })
   const [message, setMessage] = useState(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const handleSubmit = async (e) => {
-    e.preventDefault()
-    setIsSubmitting(true)
+  const { createTicket } = useTicketStore();
+  const { user } = useAuthStore();
+  const router = useRouter();
 
-    // Simulate API call
-    setTimeout(() => {
+  const[authChecked, setAuthChecked] = useState(false);
+
+  useEffect(() => {
+    if (user === null) {
+      router.push("/login");
+    } else {
+      setAuthChecked(true);
+    }
+  }, [user]);
+
+  if (!authChecked) {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-gray-500">
+        Loading...
+      </div>
+    );
+  }
+
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+
+    try {
+      const ticketPayload = {
+        ...formData,
+        submittedBy: user?.name || "Unknown",
+        submittedByEmail: user?.email || "unknown@hospital.com",
+        department: formData.department || user?.department || "General",
+      };
+      await createTicket(ticketPayload, formData.attachments);
+
       setMessage({
         type: "success",
         text: "Ticket submitted successfully! You will receive a confirmation email shortly.",
-      })
-      setFormData({ title: "", description: "", priority: "", department: "" })
-      setIsSubmitting(false)
-    }, 1000)
-  }
+      });
+
+      setFormData({
+        title: "",
+        description: "",
+        priority: "",
+        department: "",
+        attachments: []
+      });
+    } catch (error) {
+      console.error("Ticket submission failed:", error);
+      setMessage({
+        type: "error",
+        text: "Failed to submit the ticket. Please try again later.",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
 
   const handleInputChange = (field, value) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
@@ -134,16 +185,34 @@ export default function SubmitTicket() {
                     <Label htmlFor="department" className="text-sm font-medium text-gray-700">
                       Department *
                     </Label>
-                    <Input
-                      id="department"
-                      type="text"
-                      placeholder="e.g., Emergency Medicine, Radiology"
+                    <Select
                       value={formData.department}
-                      onChange={(e) => handleInputChange("department", e.target.value)}
-                      className="h-11 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
-                      required
-                    />
+                      onValueChange={(value) => handleInputChange("department", value)}
+                    >
+                      <SelectTrigger className="h-11 border-gray-300 focus:border-blue-500 focus:ring-blue-500">
+                        <SelectValue placeholder="Select department" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="emergency-medicine">Emergency Medicine</SelectItem>
+                        <SelectItem value="radiology">Radiology</SelectItem>
+                        <SelectItem value="cardiology">Cardiology</SelectItem>
+                        <SelectItem value="neurology">Neurology</SelectItem>
+                        <SelectItem value="oncology">Oncology</SelectItem>
+                        <SelectItem value="orthopedics">Orthopedics</SelectItem>
+                        <SelectItem value="pediatrics">Pediatrics</SelectItem>
+                        <SelectItem value="pharmacy">Pharmacy</SelectItem>
+                        <SelectItem value="laboratory">Laboratory</SelectItem>
+                        <SelectItem value="surgery">Surgery</SelectItem>
+                        <SelectItem value="icu">Intensive Care Unit (ICU)</SelectItem>
+                        <SelectItem value="it">Information Technology (IT)</SelectItem>
+                        <SelectItem value="hr">Human Resources (HR)</SelectItem>
+                        <SelectItem value="administration">Administration</SelectItem>
+                        <SelectItem value="facilities">Facilities & Maintenance</SelectItem>
+                        <SelectItem value="billing">Billing & Insurance</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
+
 
                   <div className="space-y-2">
                     <Label htmlFor="priority" className="text-sm font-medium text-gray-700">
@@ -174,6 +243,43 @@ export default function SubmitTicket() {
                       required
                     />
                   </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="attachments" className="text-sm font-medium text-gray-700">
+                      Attachments (Optional)
+                    </Label>
+                    <Input
+                      id="attachments"
+                      type="file"
+                      multiple
+                      accept=".jpg,.jpeg,.png,.pdf,.doc,.docx"
+                      onChange={(e) => {
+                        const newFiles = Array.from(e.target.files);
+
+                        setFormData((prev) => {
+                          const existingNames = prev.attachments.map((file) => file.name);
+                          const filtered = newFiles.filter((file) => !existingNames.includes(file.name));
+
+                          return {
+                            ...prev,
+                            attachments: [...prev.attachments, ...filtered],
+                          };
+                        });
+                      }}
+                      className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                    />
+                    <p className="text-xs text-gray-500">
+                      Supported formats: JPG, PNG, PDF, DOC. You can upload multiple files.
+                    </p>
+                  </div>
+
+                  {/* Show file names */}
+                  {formData.attachments.length > 0 && (
+                    <ul className="mt-2 text-sm text-gray-600">
+                      {formData.attachments.map((file, i) => (
+                        <li key={i}>📎 {file.name}</li>
+                      ))}
+                    </ul>
+                  )}
 
                   <div className="pt-4">
                     <Button

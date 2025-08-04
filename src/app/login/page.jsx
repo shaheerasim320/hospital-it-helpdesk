@@ -18,8 +18,8 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { Stethoscope, Monitor, Shield, Headphones } from "lucide-react"
-import useAuthStore from "@/store/authStore"
-import { doc, getDoc } from "firebase/firestore"
+import useAuthStore from "@/store/useAuthStore"
+import { doc, getDoc, serverTimestamp, updateDoc } from "firebase/firestore"
 
 export default function LoginPage() {
   const setUser = useAuthStore((state) => state.setUser)
@@ -58,13 +58,20 @@ export default function LoginPage() {
         return;
       }
 
+      await updateDoc(doc(db, "users", uid), {
+        lastLogin: serverTimestamp(),
+      });
+
       setUser({
-        uid,
+        uid: userData.uid,
         name: userData.name,
         email: userData.email,
         role: userData.role,
         status: userData.status,
-      })
+        department: userData.department,
+      });
+
+      toast.success("Login successful!");
 
       if (userData.role === "admin") {
         router.push("/admin")
@@ -73,27 +80,8 @@ export default function LoginPage() {
       }
 
     } catch (err) {
-      console.error(err);
-
-      switch (err.code) {
-        case "auth/user-not-found":
-          toast.error("No account found with this email.");
-          break;
-        case "auth/wrong-password":
-          toast.error("Incorrect password. Please try again.");
-          break;
-        case "auth/invalid-email":
-          toast.error("Invalid email address format.");
-          break;
-        case "auth/too-many-requests":
-          toast.error("Too many failed attempts. Please try again later.");
-          break;
-        case "auth/invalid-credential":
-          toast.error("Invalid credentials. Please try again.")
-          break;
-        default:
-          toast.error("Something went wrong. Please try again.");
-      }
+      toast.error("Invalid email or password.");
+      console.error("Login error:", err);
       setEmail("");
       setPassword("");
     }

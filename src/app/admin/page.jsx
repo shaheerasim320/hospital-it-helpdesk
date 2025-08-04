@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -25,128 +25,138 @@ import {
   User,
   Calendar,
   Building,
-} from "lucide-react"
+  Loader2,
+} from "lucide-react";
+
 import Navbar from "../../components/navbar"
+import { useRouter } from "next/navigation"
+import useAuthStore from "@/store/useAuthStore"
+import useAdminStore from "@/store/useAdminStore"
+import useTicketStore from "@/store/useTicketStore"
+
+const initialUsers = [
+  {
+    id: 1,
+    fullName: "Dr. Sarah Johnson",
+    email: "sarah.johnson@hospital.com",
+    department: "Emergency Medicine",
+    role: "doctor",
+    approved: false,
+    dateRequested: "2024-01-15",
+    lastLogin: null,
+  },
+  {
+    id: 2,
+    fullName: "Mike Chen",
+    email: "mike.chen@hospital.com",
+    department: "IT Support",
+    role: "it",
+    approved: true,
+    dateRequested: "2024-01-10",
+    lastLogin: "2024-01-20",
+  },
+  {
+    id: 3,
+    fullName: "Dr. Emily Rodriguez",
+    email: "emily.rodriguez@hospital.com",
+    department: "Cardiology",
+    role: "doctor",
+    approved: false,
+    dateRequested: "2024-01-18",
+    lastLogin: null,
+  },
+  {
+    id: 4,
+    fullName: "Jennifer Adams",
+    email: "jennifer.adams@hospital.com",
+    department: "Nursing",
+    role: "nurse",
+    approved: true,
+    dateRequested: "2024-01-12",
+    lastLogin: "2024-01-19",
+  },
+  {
+    id: 5,
+    fullName: "Robert Wilson",
+    email: "robert.wilson@hospital.com",
+    department: "Administration",
+    role: "admin",
+    approved: true,
+    dateRequested: "2024-01-08",
+    lastLogin: "2024-01-21",
+  },
+]
+
+// Sample ticket data
+const initialTickets = [
+  {
+    id: "TK-001",
+    title: "Computer won't start in Room 302",
+    status: "open",
+    priority: "high",
+    department: "Emergency Medicine",
+    submittedBy: "Dr. Sarah Johnson",
+    assignedTo: null,
+    dateSubmitted: "2024-01-15",
+    lastUpdated: "2024-01-15",
+    description: "Desktop computer in patient room 302 won't power on. Red light blinking on power button.",
+  },
+  {
+    id: "TK-002",
+    title: "Printer offline in Radiology",
+    status: "in-progress",
+    priority: "medium",
+    department: "Radiology",
+    submittedBy: "Dr. Mark Stevens",
+    assignedTo: "Mike Chen",
+    dateSubmitted: "2024-01-14",
+    lastUpdated: "2024-01-16",
+    description: "Main printer showing offline status, unable to print patient reports.",
+  },
+  {
+    id: "TK-003",
+    title: "Email not syncing on mobile device",
+    status: "resolved",
+    priority: "low",
+    department: "Cardiology",
+    submittedBy: "Dr. Emily Rodriguez",
+    assignedTo: "Mike Chen",
+    dateSubmitted: "2024-01-12",
+    lastUpdated: "2024-01-18",
+    description: "Hospital email not syncing properly on iPhone, missing recent messages.",
+  },
+  {
+    id: "TK-004",
+    title: "Software license expired",
+    status: "open",
+    priority: "medium",
+    department: "Pharmacy",
+    submittedBy: "Lisa Park",
+    assignedTo: null,
+    dateSubmitted: "2024-01-10",
+    lastUpdated: "2024-01-10",
+    description: "Pharmacy management software showing license expiration warning.",
+  },
+  {
+    id: "TK-005",
+    title: "Network connectivity issues",
+    status: "in-progress",
+    priority: "high",
+    department: "ICU",
+    submittedBy: "Jennifer Adams",
+    assignedTo: "Mike Chen",
+    dateSubmitted: "2024-01-16",
+    lastUpdated: "2024-01-17",
+    description: "Intermittent network connectivity affecting patient monitoring systems.",
+  }
+]
+
 
 export default function AdminDashboard() {
-  // Sample user data
-  const [users, setUsers] = useState([
-    {
-      id: 1,
-      fullName: "Dr. Sarah Johnson",
-      email: "sarah.johnson@hospital.com",
-      department: "Emergency Medicine",
-      role: "doctor",
-      approved: false,
-      dateRequested: "2024-01-15",
-      lastLogin: null,
-    },
-    {
-      id: 2,
-      fullName: "Mike Chen",
-      email: "mike.chen@hospital.com",
-      department: "IT Support",
-      role: "it",
-      approved: true,
-      dateRequested: "2024-01-10",
-      lastLogin: "2024-01-20",
-    },
-    {
-      id: 3,
-      fullName: "Dr. Emily Rodriguez",
-      email: "emily.rodriguez@hospital.com",
-      department: "Cardiology",
-      role: "doctor",
-      approved: false,
-      dateRequested: "2024-01-18",
-      lastLogin: null,
-    },
-    {
-      id: 4,
-      fullName: "Jennifer Adams",
-      email: "jennifer.adams@hospital.com",
-      department: "Nursing",
-      role: "nurse",
-      approved: true,
-      dateRequested: "2024-01-12",
-      lastLogin: "2024-01-19",
-    },
-    {
-      id: 5,
-      fullName: "Robert Wilson",
-      email: "robert.wilson@hospital.com",
-      department: "Administration",
-      role: "admin",
-      approved: true,
-      dateRequested: "2024-01-08",
-      lastLogin: "2024-01-21",
-    },
-  ])
-
-  // Sample ticket data
-  const [tickets, setTickets] = useState([
-    {
-      id: "TK-001",
-      title: "Computer won't start in Room 302",
-      status: "open",
-      priority: "high",
-      department: "Emergency Medicine",
-      submittedBy: "Dr. Sarah Johnson",
-      assignedTo: null,
-      dateSubmitted: "2024-01-15",
-      lastUpdated: "2024-01-15",
-      description: "Desktop computer in patient room 302 won't power on. Red light blinking on power button.",
-    },
-    {
-      id: "TK-002",
-      title: "Printer offline in Radiology",
-      status: "in-progress",
-      priority: "medium",
-      department: "Radiology",
-      submittedBy: "Dr. Mark Stevens",
-      assignedTo: "Mike Chen",
-      dateSubmitted: "2024-01-14",
-      lastUpdated: "2024-01-16",
-      description: "Main printer showing offline status, unable to print patient reports.",
-    },
-    {
-      id: "TK-003",
-      title: "Email not syncing on mobile device",
-      status: "resolved",
-      priority: "low",
-      department: "Cardiology",
-      submittedBy: "Dr. Emily Rodriguez",
-      assignedTo: "Mike Chen",
-      dateSubmitted: "2024-01-12",
-      lastUpdated: "2024-01-18",
-      description: "Hospital email not syncing properly on iPhone, missing recent messages.",
-    },
-    {
-      id: "TK-004",
-      title: "Software license expired",
-      status: "open",
-      priority: "medium",
-      department: "Pharmacy",
-      submittedBy: "Lisa Park",
-      assignedTo: null,
-      dateSubmitted: "2024-01-10",
-      lastUpdated: "2024-01-10",
-      description: "Pharmacy management software showing license expiration warning.",
-    },
-    {
-      id: "TK-005",
-      title: "Network connectivity issues",
-      status: "in-progress",
-      priority: "high",
-      department: "ICU",
-      submittedBy: "Jennifer Adams",
-      assignedTo: "Mike Chen",
-      dateSubmitted: "2024-01-16",
-      lastUpdated: "2024-01-17",
-      description: "Intermittent network connectivity affecting patient monitoring systems.",
-    },
-  ])
-
+  const router = useRouter()
+  const { user } = useAuthStore()
+  const { staff, fetchStaff, loading, updateRole } = useAdminStore()
+  const { tickets, fetchTickets, loading: ticketLoading, error } = useTicketStore();
   const [searchTerm, setSearchTerm] = useState("")
   const [filterStatus, setFilterStatus] = useState("all")
   const [ticketSearchTerm, setTicketSearchTerm] = useState("")
@@ -154,6 +164,43 @@ export default function AdminDashboard() {
   const [editingUser, setEditingUser] = useState(null)
   const [editingTicket, setEditingTicket] = useState(null)
   const [message, setMessage] = useState(null)
+  const [approvingUserId, setApprovingUserId] = useState(null)
+  const [rejectingUserId, setRejectingUserId] = useState(null)
+  const [isAdmin, setIsAdmin] = useState(false)
+  const [users, setUsers] = useState(initialUsers);
+  const [ticket, setTickets] = useState(initialTickets);
+  const[authChecked, setAuthChecked] = useState(false);
+
+  useEffect(() => {
+    if (!user) {
+      router.replace("/login")
+    } else if (user?.role !== "admin" && user?.status !== "approved") {
+      router.replace("/unauthorized")
+    } else {
+      setIsAdmin(true);
+      setAuthChecked(true);
+    }
+  }, [user])
+
+  useEffect(() => {
+    if (isAdmin) {
+      fetchTickets();
+      fetchStaff();
+    }
+  }, [isAdmin]);
+
+
+  if (!authChecked) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+      </div>
+    );
+  }
+
+  if (!user || !isAdmin) {
+    return null;
+  }
 
   const roles = [
     { value: "admin", label: "Administrator", color: "bg-purple-100 text-purple-800" },
@@ -202,74 +249,116 @@ export default function AdminDashboard() {
     return <Badge className={`${priorityColors[priority]} capitalize px-2 py-1`}>{priority}</Badge>
   }
 
-  // User Management Functions
-  const handleApproveUser = (userId) => {
-    setUsers(users.map((user) => (user.id === userId ? { ...user, approved: true } : user)))
-    const user = users.find((u) => u.id === userId)
-    showToast("success", `${user.fullName} has been approved successfully.`)
-  }
+  const handleApproveUser = async (userId) => {
+    setApprovingUserId(userId);
+    try {
+      const res = await fetch("/api/approve-user", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId }),
+      });
 
-  const handleRejectUser = (userId) => {
-    setUsers(users.map((user) => (user.id === userId ? { ...user, approved: false } : user)))
-    const user = users.find((u) => u.id === userId)
-    showToast("error", `${user.fullName}'s access has been revoked.`)
-  }
+      const result = await res.json();
 
-  const handleRoleChange = (userId, newRole) => {
-    setUsers(users.map((user) => (user.id === userId ? { ...user, role: newRole } : user)))
-    const user = users.find((u) => u.id === userId)
-    const roleInfo = getRoleInfo(newRole)
-    showToast("success", `${user.fullName}'s role has been updated to ${roleInfo.label}.`)
-    setEditingUser(null)
-  }
+      if (res.ok) {
+        await fetchStaff();
+        showToast("success", `${result.name} has been approved and notified.`);
+      } else {
+        showToast("error", result.error || "Failed to approve user.");
+      }
+    } catch (error) {
+      console.error("Approval error:", error);
+      showToast("error", "Something went wrong while approving the user.");
+    } finally {
+      setApprovingUserId(null);
+    }
+  };
 
-  // Ticket Management Functions
+  const handleRejectUser = async (userId) => {
+    setRejectingUserId(userId);
+    try {
+      const res = await fetch("/api/reject-user", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId }),
+      });
+
+      const result = await res.json();
+
+      if (res.ok) {
+        await fetchStaff();
+        showToast("success", `${result.name} has been rejected and notified.`);
+      } else {
+        showToast("error", result.error || "Failed to reject user.");
+      }
+    } catch (error) {
+      console.error("Rejection error:", error);
+      showToast("error", "Something went wrong while rejecting the user.");
+    } finally {
+      setRejectingUserId(null);
+    }
+  };
+
+
+
+  const handleRoleChange = async (userId, newRole) => {
+    try {
+      await updateRole(userId, newRole);
+      const user = staff.find((u) => u.id === userId);
+      const fullName = user?.name || "User";
+
+      showToast("success", `${fullName}'s role has been updated to ${newRole}.`);
+      setEditingUser(null);
+    } catch (error) {
+      console.error("Failed to update role:", error);
+      showToast("error", "Failed to update user role.");
+    }
+  };
+
   const handleAssignTicket = (ticketId, agentId) => {
     const agent = users.find((u) => u.id === Number.parseInt(agentId))
     setTickets(
       tickets.map((ticket) =>
         ticket.id === ticketId
           ? {
-              ...ticket,
-              assignedTo: agent ? agent.fullName : null,
-              lastUpdated: new Date().toISOString().split("T")[0],
-            }
+            ...ticket,
+            assignedTo: agent ? agent.fullName : null,
+            lastUpdated: new Date().toISOString().split("T")[0],
+          }
           : ticket,
       ),
     )
-    const ticket = tickets.find((t) => t.id === ticketId)
+    const ticket = ticket.find((t) => t.id === ticketId)
     showToast("success", `Ticket ${ticketId} has been assigned to ${agent ? agent.fullName : "Unassigned"}.`)
     setEditingTicket(null)
   }
 
   const handleStatusChange = (ticketId, newStatus) => {
     setTickets(
-      tickets.map((ticket) =>
+      ticket.map((ticket) =>
         ticket.id === ticketId
           ? { ...ticket, status: newStatus, lastUpdated: new Date().toISOString().split("T")[0] }
           : ticket,
       ),
     )
-    const ticket = tickets.find((t) => t.id === ticketId)
+    const ticket = ticket.find((t) => t.id === ticketId)
     showToast("success", `Ticket ${ticketId} status updated to ${newStatus.replace("-", " ")}.`)
   }
-
-  // Filtered data
-  const filteredUsers = users.filter((user) => {
+  const filteredUsers = staff.filter((user) => {
     const matchesSearch =
-      user.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.department.toLowerCase().includes(searchTerm.toLowerCase())
 
     const matchesFilter =
       filterStatus === "all" ||
-      (filterStatus === "approved" && user.approved) ||
-      (filterStatus === "pending" && !user.approved)
+      (filterStatus === "approved" && user.status === "approved") ||
+      (filterStatus === "pending" && user.status === "pending")
 
     return matchesSearch && matchesFilter
   })
 
-  const filteredTickets = tickets.filter((ticket) => {
+  const filteredTickets = ticket.filter((ticket) => {
     const matchesSearch =
       ticket.title.toLowerCase().includes(ticketSearchTerm.toLowerCase()) ||
       ticket.id.toLowerCase().includes(ticketSearchTerm.toLowerCase()) ||
@@ -281,18 +370,17 @@ export default function AdminDashboard() {
     return matchesSearch && matchesFilter
   })
 
-  // Statistics
   const userStats = {
-    total: users.length,
-    approved: users.filter((u) => u.approved).length,
-    pending: users.filter((u) => !u.approved).length,
-  }
+    total: staff.length,
+    approved: staff.filter((u) => u.status === "approved").length,
+    pending: staff.filter((u) => u.status === "pending").length,
+  };
 
   const ticketStats = {
-    total: tickets.length,
-    open: tickets.filter((t) => t.status === "open").length,
-    inProgress: tickets.filter((t) => t.status === "in-progress").length,
-    resolved: tickets.filter((t) => t.status === "resolved").length,
+    total: ticket.length,
+    open: ticket.filter((t) => t.status === "open").length,
+    inProgress: ticket.filter((t) => t.status === "in-progress").length,
+    resolved: ticket.filter((t) => t.status === "resolved").length,
   }
 
   return (
@@ -658,12 +746,12 @@ export default function AdminDashboard() {
                           <div className="flex-1">
                             <div className="flex items-start justify-between mb-2">
                               <div>
-                                <h3 className="font-semibold text-gray-800">{user.fullName}</h3>
+                                <h3 className="font-semibold text-gray-800">{user.name}</h3>
                                 <p className="text-sm text-gray-600">{user.email}</p>
                                 <p className="text-sm text-gray-500">{user.department}</p>
                               </div>
                               <div className="flex items-center space-x-2">
-                                {user.approved ? (
+                                {user.status === "approved" ? (
                                   <Badge className="bg-green-100 text-green-800 border-green-200">
                                     <CheckCircle className="w-3 h-3 mr-1" />
                                     Approved
@@ -678,9 +766,9 @@ export default function AdminDashboard() {
                             </div>
 
                             <div className="flex items-center space-x-4 text-sm text-gray-500">
-                              <span>Requested: {new Date(user.dateRequested).toLocaleDateString()}</span>
+                              <span>Requested:{" "}{user.createdAt?.toDate ? new Date(user.createdAt.toDate()).toLocaleDateString() : "N/A"}</span>
                               {user.lastLogin && (
-                                <span>Last Login: {new Date(user.lastLogin).toLocaleDateString()}</span>
+                                <span>Last Login: {new Date(user.lastLogin.toDate()).toLocaleDateString()}</span>
                               )}
                             </div>
                           </div>
@@ -732,25 +820,36 @@ export default function AdminDashboard() {
                           </div>
 
                           {/* Action Buttons */}
+                          {/* Action Buttons */}
                           <div className="flex items-center space-x-2">
-                            {user.approved ? (
+                            {user.status === "approved" ? (
                               <Button
                                 size="sm"
                                 variant="outline"
                                 onClick={() => handleRejectUser(user.id)}
                                 className="text-red-600 border-red-200 hover:bg-red-50 bg-transparent"
+                                disabled={rejectingUserId === user.id}
                               >
-                                <UserX className="w-4 h-4 mr-1" />
-                                Revoke
+                                {rejectingUserId === user.id ? (
+                                  <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                                ) : (
+                                  <UserX className="w-4 h-4 mr-1" />
+                                )}
+                                {rejectingUserId === user.id ? "Revoking..." : "Revoke"}
                               </Button>
                             ) : (
                               <Button
                                 size="sm"
                                 onClick={() => handleApproveUser(user.id)}
                                 className="bg-green-600 hover:bg-green-700 text-white"
+                                disabled={approvingUserId === user.id}
                               >
-                                <UserCheck className="w-4 h-4 mr-1" />
-                                Approve
+                                {approvingUserId === user.id ? (
+                                  <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                                ) : (
+                                  <UserCheck className="w-4 h-4 mr-1" />
+                                )}
+                                {approvingUserId === user.id ? "Approving..." : "Approve"}
                               </Button>
                             )}
                           </div>

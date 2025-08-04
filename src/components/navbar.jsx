@@ -4,14 +4,19 @@ import { useState } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Menu, X, Monitor, Home, FileText, Clipboard, Settings, LogOut } from "lucide-react"
+import useAuthStore from "@/store/useAuthStore"
 
-export default function Navbar({ userRole = "Staff" }) {
+export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false)
+  const { user, logout } = useAuthStore()
 
   const handleLogout = () => {
-    // Logout logic here
-    console.log("Logging out...")
+    logout()
+    router.replace("/login")
   }
+
+  const userRole = user?.role || "Guest"
+  const userName = user?.name || "Unknown"
 
   return (
     <nav className="bg-white shadow-lg border-b border-gray-200">
@@ -63,7 +68,7 @@ export default function Navbar({ userRole = "Staff" }) {
             {/* User info and logout */}
             <div className="flex items-center space-x-4 ml-6 pl-6 border-l border-gray-200">
               <span className="text-sm text-gray-600">
-                <span className="font-medium">{userRole}</span>
+                <span className="font-medium">{userName}</span> ({userRole})
               </span>
               <Button
                 onClick={handleLogout}
@@ -121,7 +126,7 @@ export default function Navbar({ userRole = "Staff" }) {
               )}
               <div className="border-t border-gray-200 pt-3 mt-3">
                 <div className="px-3 py-2 text-sm text-gray-600">
-                  Role: <span className="font-medium">{userRole}</span>
+                  {userName} <span className="font-medium">({userRole})</span>
                 </div>
                 <Button
                   onClick={handleLogout}

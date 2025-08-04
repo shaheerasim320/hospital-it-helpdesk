@@ -1,10 +1,18 @@
+"use client"
 import Link from "next/link"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { FileText, Clipboard, Monitor, Stethoscope, Shield, Users } from "lucide-react"
 import Navbar from "../../components/navbar"
+import useAuthStore from "@/store/useAuthStore"
+import { useEffect, useState } from "react"
+import { useRouter } from "next/navigation"
 
-export default function Dashboard({ userName = "Dr. Smith", userRole = "Staff" }) {
+export default function Dashboard() {
+  const [authChecked, setAuthChecked] = useState(false);
+  const [recentTickets, setRecentTickets] = useState([])
+  const { user } = useAuthStore();
+  const router = useRouter();
   const quickActions = [
     {
       title: "Submit New Ticket",
@@ -23,10 +31,41 @@ export default function Dashboard({ userName = "Dr. Smith", userRole = "Staff" }
       hoverColor: "hover:bg-green-600",
     },
   ]
+  useEffect(() => {
+    if (user === null) {
+      router.push("/login");
+    } else {
+      setAuthChecked(true);
+      fetchRecentTickets(user.email)
+    }
+  }, [user])
+
+  const fetchRecentTickets = async (email) => {
+    try {
+      // Replace this with actual DB call (Firebase/Supabase)
+      const mockData = [
+        { id: 1, subject: "Printer not working", date: "2025-08-02" },
+        { id: 2, subject: "Email sync issue", date: "2025-08-01" },
+      ]
+      setRecentTickets(mockData)
+    } catch (err) {
+      console.error("Failed to fetch tickets:", err)
+    }
+  }
+  if (!authChecked) {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-gray-500">
+        Loading...
+      </div>
+    );
+  }
+
+  const userRole = user?.role || "Guest"
+  const userName = user?.name || "Unknown"
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-green-50">
-      <Navbar userRole={userRole} />
+      <Navbar />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Welcome Section */}
@@ -135,10 +174,18 @@ export default function Dashboard({ userName = "Dr. Smith", userRole = "Staff" }
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-2 text-sm">
-                <div className="text-gray-600">No recent tickets</div>
-                <div className="text-gray-500">Submit a ticket to get started</div>
-              </div>
+              {recentTickets.length > 0 ? (
+                <ul className="space-y-2 text-sm text-gray-700">
+                  {recentTickets.map((ticket) => (
+                    <li key={ticket.id} className="border-b pb-2">
+                      <div className="font-medium">{ticket.subject}</div>
+                      <div className="text-xs text-gray-500">Submitted on {ticket.date}</div>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <div className="text-sm text-gray-600">No recent tickets</div>
+              )}
             </CardContent>
           </Card>
 

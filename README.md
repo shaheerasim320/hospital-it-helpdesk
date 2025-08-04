@@ -1,36 +1,65 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
 
-## Getting Started
+# Hospital IT Help Desk
 
-First, run the development server:
+A web-based platform for managing internal IT support requests in hospitals, built with **Next.js**, **Firebase**, **Firestore**, and **Zustand**.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+🔗 **Live Site:** [https://hospital-it-helpdesk.vercel.app/](https://hospital-it-helpdesk.vercel.app/)
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+---
 
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
+## 🔧 Features
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- **Role-Based Access Control**
+  - Admins, IT Support, and Staff roles
+  - New users must be approved by admin before accessing the dashboard
 
-## Learn More
+- **Authentication**
+  - Firebase Auth (Email/Password)
+  - Zustand store for persistent auth state
+  - Approval-based access logic handled at login
 
-To learn more about Next.js, take a look at the following resources:
+- **Ticket Management**
+  - Staff can raise new IT support tickets
+  - Admins/IT Staff can view, assign, resolve, or reject tickets
+  - Ticket history view with real-time status updates
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- **Email Notifications**
+  - **Powered by Brevo (formerly Sendinblue)**:
+    - On user registration (pending approval)
+    - When admin approves/revokes access
+    - When a ticket is created, updated, or resolved
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- **User Profile Management**
+  - Admins can approve/revoke access
+  - Staff can manage their profile
 
-## Deploy on Vercel
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+---
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## 🛠️ Tech Stack
+
+| Technology | Description |
+|------------|-------------|
+| **Next.js (App Router)** | Frontend and server actions |
+| **Firebase Auth**        | Authentication system       |
+| **Firestore**            | Real-time database          |
+| **Zustand**              | Global state management     |
+| **Brevo SMTP**           | Email sending service       |
+
+
+---
+
+## 🚀 Future Improvements
+
+- Ticket categories and priorities
+- Ticket analytics dashboard
+- File upload for attachments
+- Notifications center (in-app)
+
+---
+
+## 🤝 Contributing
+
+Pull requests are welcome. For major changes, please open an issue first.
+
+

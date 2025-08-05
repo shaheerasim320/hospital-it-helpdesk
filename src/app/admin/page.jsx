@@ -33,6 +33,7 @@ import { useRouter } from "next/navigation"
 import useAuthStore from "@/store/useAuthStore"
 import useAdminStore from "@/store/useAdminStore"
 import useTicketStore from "@/store/useTicketStore"
+import AssignedTicketsList from "@/components/AssignedTicketsList"
 
 const initialUsers = [
   {
@@ -156,7 +157,7 @@ export default function AdminDashboard() {
   const router = useRouter()
   const { user } = useAuthStore()
   const { staff, fetchStaff, loading, updateRole } = useAdminStore()
-  const { tickets, fetchTickets, loading: ticketLoading, error } = useTicketStore();
+  const { tickets, fetchTickets, loading: ticketLoading, error, assignTicket, updateTicketStatus } = useTicketStore();
   const [searchTerm, setSearchTerm] = useState("")
   const [filterStatus, setFilterStatus] = useState("all")
   const [ticketSearchTerm, setTicketSearchTerm] = useState("")
@@ -169,7 +170,7 @@ export default function AdminDashboard() {
   const [isAdmin, setIsAdmin] = useState(false)
   const [users, setUsers] = useState(initialUsers);
   const [ticket, setTickets] = useState(initialTickets);
-  const[authChecked, setAuthChecked] = useState(false);
+  const [authChecked, setAuthChecked] = useState(false);
 
   useEffect(() => {
     if (!user) {
@@ -210,7 +211,7 @@ export default function AdminDashboard() {
     { value: "staff", label: "Staff", color: "bg-gray-100 text-gray-800" },
   ]
 
-  const agents = users.filter((user) => user.approved && (user.role === "it" || user.role === "admin"))
+  const agents = staff.filter((user) => user.status === "approved" && (user.role === "it" || user.role === "admin"))
 
   const showToast = (type, text) => {
     setMessage({ type, text })
@@ -314,35 +315,28 @@ export default function AdminDashboard() {
       showToast("error", "Failed to update user role.");
     }
   };
-
-  const handleAssignTicket = (ticketId, agentId) => {
-    const agent = users.find((u) => u.id === Number.parseInt(agentId))
-    setTickets(
-      tickets.map((ticket) =>
-        ticket.id === ticketId
-          ? {
-            ...ticket,
-            assignedTo: agent ? agent.fullName : null,
-            lastUpdated: new Date().toISOString().split("T")[0],
-          }
-          : ticket,
-      ),
-    )
-    const ticket = ticket.find((t) => t.id === ticketId)
-    showToast("success", `Ticket ${ticketId} has been assigned to ${agent ? agent.fullName : "Unassigned"}.`)
-    setEditingTicket(null)
+  const handleAssignTicket = async (ticketId, agentId) => {
+    const agent = staff.find((u) => u.id === agentId)
+    const ticket = tickets.find((t) => t.id === ticketId)
+    try {
+      await assignTicket(ticketId, agentId)
+      showToast("success", `Ticket ${ticket.ticketId} has been assigned to ${agent ? agent.name : "Unassigned"}.`)
+      setEditingTicket(null)
+    } catch (error) {
+      console.error("Error assigning ticket:", err);
+      showToast("error", "Failed to assign the ticket.");
+    }
   }
 
-  const handleStatusChange = (ticketId, newStatus) => {
-    setTickets(
-      ticket.map((ticket) =>
-        ticket.id === ticketId
-          ? { ...ticket, status: newStatus, lastUpdated: new Date().toISOString().split("T")[0] }
-          : ticket,
-      ),
-    )
-    const ticket = ticket.find((t) => t.id === ticketId)
-    showToast("success", `Ticket ${ticketId} status updated to ${newStatus.replace("-", " ")}.`)
+  const handleStatusChange = async (ticketId, newStatus) => {
+    const ticket = tickets.find((t) => t.id === ticketId)
+    try {
+      await updateTicketStatus(ticketId, newStatus)
+      showToast("success", `Ticket ${ticket.ticketId} status updated to ${newStatus.replace("-", " ")}.`)
+    } catch (error) {
+      console.error("Error updating ticket status:", err);
+      showToast("error", "Failed to update ticket status.");
+    }
   }
   const filteredUsers = staff.filter((user) => {
     const matchesSearch =
@@ -358,10 +352,10 @@ export default function AdminDashboard() {
     return matchesSearch && matchesFilter
   })
 
-  const filteredTickets = ticket.filter((ticket) => {
+  const filteredTickets = tickets.filter((ticket) => {
     const matchesSearch =
       ticket.title.toLowerCase().includes(ticketSearchTerm.toLowerCase()) ||
-      ticket.id.toLowerCase().includes(ticketSearchTerm.toLowerCase()) ||
+      ticket.ticketId.toLowerCase().includes(ticketSearchTerm.toLowerCase()) ||
       ticket.submittedBy.toLowerCase().includes(ticketSearchTerm.toLowerCase()) ||
       ticket.department.toLowerCase().includes(ticketSearchTerm.toLowerCase())
 
@@ -377,10 +371,10 @@ export default function AdminDashboard() {
   };
 
   const ticketStats = {
-    total: ticket.length,
-    open: ticket.filter((t) => t.status === "open").length,
-    inProgress: ticket.filter((t) => t.status === "in-progress").length,
-    resolved: ticket.filter((t) => t.status === "resolved").length,
+    total: tickets.length,
+    open: tickets.filter((t) => t.status === "open").length,
+    inProgress: tickets.filter((t) => t.status === "in-progress").length,
+    resolved: tickets.filter((t) => t.status === "resolved").length,
   }
 
   return (
@@ -412,7 +406,7 @@ export default function AdminDashboard() {
 
         {/* Tabs for different admin sections */}
         <Tabs defaultValue="tickets" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-2 lg:w-96">
+          <TabsList className="grid w-full grid-cols-3 lg:w-[600px]">
             <TabsTrigger value="tickets" className="flex items-center space-x-2">
               <Ticket className="w-4 h-4" />
               <span>Ticket Management</span>
@@ -420,6 +414,10 @@ export default function AdminDashboard() {
             <TabsTrigger value="users" className="flex items-center space-x-2">
               <Users className="w-4 h-4" />
               <span>User Management</span>
+            </TabsTrigger>
+            <TabsTrigger value="assigned" className="flex items-center space-x-2">
+              <UserCheck className="w-4 h-4" />
+              <span>Assigned to Me</span>
             </TabsTrigger>
           </TabsList>
 
@@ -538,7 +536,7 @@ export default function AdminDashboard() {
                           <div className="flex items-start justify-between mb-2">
                             <div>
                               <h3 className="font-semibold text-gray-800">{ticket.title}</h3>
-                              <p className="text-sm text-gray-600">#{ticket.id}</p>
+                              <p className="text-sm text-gray-600">#{ticket.ticketId}</p>
                             </div>
                             <div className="flex items-center space-x-2">
                               {getStatusBadge(ticket.status)}
@@ -570,7 +568,7 @@ export default function AdminDashboard() {
                           <div className="flex items-center text-sm">
                             <span className="font-medium text-gray-700 mr-2">Assigned to:</span>
                             <span className={ticket.assignedTo ? "text-gray-600" : "text-orange-600"}>
-                              {ticket.assignedTo || "Unassigned"}
+                              {agents.find((a) => a.id === ticket.assignedTo)?.name || "Unassigned"}
                             </span>
                           </div>
                         </div>
@@ -601,7 +599,7 @@ export default function AdminDashboard() {
                             <Select
                               value={
                                 ticket.assignedTo
-                                  ? agents.find((a) => a.fullName === ticket.assignedTo)?.id.toString() || "0"
+                                  ? agents.find((a) => a.id === ticket.assignedTo)?.id.toString() || "0"
                                   : "0"
                               }
                               onValueChange={(agentId) => handleAssignTicket(ticket.id, agentId)}
@@ -613,7 +611,7 @@ export default function AdminDashboard() {
                                 <SelectItem value="0">Unassigned</SelectItem>
                                 {agents.map((agent) => (
                                   <SelectItem key={agent.id} value={agent.id.toString()}>
-                                    {agent.fullName}
+                                    {agent.name}
                                   </SelectItem>
                                 ))}
                               </SelectContent>
@@ -872,6 +870,10 @@ export default function AdminDashboard() {
                 </div>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="assigned">
+            <AssignedTicketsList showNavbar={false} showButton={true} />
           </TabsContent>
         </Tabs>
       </div>

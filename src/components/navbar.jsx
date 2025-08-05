@@ -5,8 +5,10 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Menu, X, Monitor, Home, FileText, Clipboard, Settings, LogOut } from "lucide-react"
 import useAuthStore from "@/store/useAuthStore"
+import { useRouter } from "next/navigation"
 
 export default function Navbar() {
+  const router = useRouter()
   const [isOpen, setIsOpen] = useState(false)
   const { user, logout } = useAuthStore()
 
@@ -17,6 +19,8 @@ export default function Navbar() {
 
   const userRole = user?.role || "Guest"
   const userName = user?.name || "Unknown"
+
+  const ticketLinkText = userRole == "IT".toLowerCase() ? "Tickets to Resolve" : "My Tickets";
 
   return (
     <nav className="bg-white shadow-lg border-b border-gray-200">
@@ -35,35 +39,28 @@ export default function Navbar() {
           {/* Desktop navigation */}
           <div className="hidden md:flex items-center space-x-4">
             <Link
-              href="/dashboard"
+              href={userRole == "Admin".toLowerCase() ? "/admin" : "/dashboard"}
               className="flex items-center px-3 py-2 text-gray-700 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
             >
               <Home className="w-4 h-4 mr-2" />
               Home
             </Link>
+            {userRole !== "IT".toLowerCase() && (
+              <Link
+                href="/submit-ticket"
+                className="flex items-center px-3 py-2 text-gray-700 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
+              >
+                <FileText className="w-4 h-4 mr-2" />
+                Submit Ticket
+              </Link>
+            )}
             <Link
-              href="/submit-ticket"
-              className="flex items-center px-3 py-2 text-gray-700 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
-            >
-              <FileText className="w-4 h-4 mr-2" />
-              Submit Ticket
-            </Link>
-            <Link
-              href="/my-tickets"
+              href={userRole == "IT".toLowerCase() ? "/my-assigned-tickets" : "/my-tickets"}
               className="flex items-center px-3 py-2 text-gray-700 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
             >
               <Clipboard className="w-4 h-4 mr-2" />
-              My Tickets
+              {ticketLinkText}
             </Link>
-            {userRole === "Admin" && (
-              <Link
-                href="/admin"
-                className="flex items-center px-3 py-2 text-gray-700 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
-              >
-                <Settings className="w-4 h-4 mr-2" />
-                Admin Panel
-              </Link>
-            )}
 
             {/* User info and logout */}
             <div className="flex items-center space-x-4 ml-6 pl-6 border-l border-gray-200">
@@ -95,35 +92,29 @@ export default function Navbar() {
           <div className="md:hidden">
             <div className="px-2 pt-2 pb-3 space-y-1 bg-gray-50 border-t border-gray-200">
               <Link
-                href="/dashboard"
+                href={userRole == "Admin".toLowerCase() ? "/admin" : "/dashboard"}
                 className="flex items-center px-3 py-2 text-gray-700 hover:text-blue-600 hover:bg-blue-50 rounded-md"
               >
                 <Home className="w-4 h-4 mr-3" />
                 Home
               </Link>
+              {userRole !== "IT".toLowerCase() && (
+                <Link
+                  href="/submit-ticket"
+                  className="flex items-center px-3 py-2 text-gray-700 hover:text-blue-600 hover:bg-blue-50 rounded-md"
+                >
+                  <FileText className="w-4 h-4 mr-3" />
+                  Submit Ticket
+                </Link>
+              )}
+
               <Link
-                href="/submit-ticket"
-                className="flex items-center px-3 py-2 text-gray-700 hover:text-blue-600 hover:bg-blue-50 rounded-md"
-              >
-                <FileText className="w-4 h-4 mr-3" />
-                Submit Ticket
-              </Link>
-              <Link
-                href="/my-tickets"
+                href={userRole == "IT".toLowerCase() ? "/my-assigned-tickets" : "/my-tickets"}
                 className="flex items-center px-3 py-2 text-gray-700 hover:text-blue-600 hover:bg-blue-50 rounded-md"
               >
                 <Clipboard className="w-4 h-4 mr-3" />
-                My Tickets
+                {ticketLinkText}
               </Link>
-              {userRole === "Admin" && (
-                <Link
-                  href="/admin"
-                  className="flex items-center px-3 py-2 text-gray-700 hover:text-blue-600 hover:bg-blue-50 rounded-md"
-                >
-                  <Settings className="w-4 h-4 mr-3" />
-                  Admin Panel
-                </Link>
-              )}
               <div className="border-t border-gray-200 pt-3 mt-3">
                 <div className="px-3 py-2 text-sm text-gray-600">
                   {userName} <span className="font-medium">({userRole})</span>

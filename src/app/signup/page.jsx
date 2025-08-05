@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Stethoscope, Monitor, Shield, Users, UserPlus, Lock, Mail } from "lucide-react"
+import { Stethoscope, Monitor, Shield, Users, UserPlus, Lock, Mail, CheckCircle } from "lucide-react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 export default function HospitalSignup() {
@@ -25,6 +25,23 @@ export default function HospitalSignup() {
   const [showPassword, setShowPassword] = useState(false)
 
   const router = useRouter()
+  const validatePassword = (password) => {
+    const minLength = password.length >= 8
+    const hasUpper = /[A-Z]/.test(password)
+    const hasLower = /[a-z]/.test(password)
+    const hasNumber = /\d/.test(password)
+    const hasSpecial = /[!@#$%^&*(),.?":{}|<>]/.test(password)
+
+    return {
+      minLength,
+      hasUpper,
+      hasLower,
+      hasNumber,
+      hasSpecial,
+      isValid: minLength && hasUpper && hasLower && hasNumber && hasSpecial,
+    }
+  }
+
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -32,6 +49,11 @@ export default function HospitalSignup() {
 
     if (password !== confirmPassword) {
       setError("Passwords do not match")
+      return
+    }
+    const passwordValidation = validatePassword(password)
+    if (!passwordValidation.isValid) {
+      setError("Password does not meet security requirements. Please check the requirements below.")
       return
     }
 
@@ -67,6 +89,7 @@ export default function HospitalSignup() {
       setLoading(false)
     }
   }
+  const passwordValidation = validatePassword(password)
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-green-50 flex items-center justify-center p-4">
@@ -212,6 +235,56 @@ export default function HospitalSignup() {
                     </button>
                   </div>
                 </div>
+
+                {/* Password Requirements */}
+                {password && (
+                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                    <p className="text-sm font-medium text-gray-700 mb-2">Password Requirements:</p>
+                    <div className="space-y-1 text-xs">
+                      <div
+                        className={`flex items-center space-x-2 ${passwordValidation.minLength ? "text-green-600" : "text-gray-500"}`}
+                      >
+                        <CheckCircle
+                          className={`w-3 h-3 ${passwordValidation.minLength ? "text-green-500" : "text-gray-400"}`}
+                        />
+                        <span>At least 8 characters</span>
+                      </div>
+                      <div
+                        className={`flex items-center space-x-2 ${passwordValidation.hasUpper ? "text-green-600" : "text-gray-500"}`}
+                      >
+                        <CheckCircle
+                          className={`w-3 h-3 ${passwordValidation.hasUpper ? "text-green-500" : "text-gray-400"}`}
+                        />
+                        <span>One uppercase letter</span>
+                      </div>
+                      <div
+                        className={`flex items-center space-x-2 ${passwordValidation.hasLower ? "text-green-600" : "text-gray-500"}`}
+                      >
+                        <CheckCircle
+                          className={`w-3 h-3 ${passwordValidation.hasLower ? "text-green-500" : "text-gray-400"}`}
+                        />
+                        <span>One lowercase letter</span>
+                      </div>
+                      <div
+                        className={`flex items-center space-x-2 ${passwordValidation.hasNumber ? "text-green-600" : "text-gray-500"}`}
+                      >
+                        <CheckCircle
+                          className={`w-3 h-3 ${passwordValidation.hasNumber ? "text-green-500" : "text-gray-400"}`}
+                        />
+                        <span>One number</span>
+                      </div>
+                      <div
+                        className={`flex items-center space-x-2 ${passwordValidation.hasSpecial ? "text-green-600" : "text-gray-500"}`}
+                      >
+                        <CheckCircle
+                          className={`w-3 h-3 ${passwordValidation.hasSpecial ? "text-green-500" : "text-gray-400"}`}
+                        />
+                        <span>One special character</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
 
                 {/* Confirm Password */}
                 <div className="space-y-2">

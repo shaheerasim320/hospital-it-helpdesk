@@ -1,7 +1,7 @@
 "use client"
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
+import { useEffect, useState } from "react"
+import { useParams, useRouter } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -23,58 +23,106 @@ import {
   Edit3,
   Send,
   History,
+  Paperclip,
+  Download,
+  Loader2,
 } from "lucide-react"
 import Navbar from "../../../components/navbar"
+import useAuthStore from "@/store/useAuthStore"
+import { collection, getDoc, getDocs, query, where } from "firebase/firestore"
+import { db } from "@/app/lib/firebase"
+import useAdminStore from "@/store/useAdminStore"
+import useTicketStore from "@/store/useTicketStore"
 
-export default function TicketDetails({ ticketId = "TK-001", userRole = "Staff" }) {
+export default function TicketDetails() {
   const router = useRouter()
-
-  // Sample ticket data - in real app, this would be fetched based on ticketId
-  const [ticket, setTicket] = useState({
-    id: "TK-001",
-    title: "Computer won't start in Room 302",
-    status: "open",
-    priority: "high",
-    department: "Emergency Medicine",
-    submittedBy: "Dr. Sarah Johnson",
-    submittedByEmail: "sarah.johnson@hospital.com",
-    assignedTo: null,
-    dateSubmitted: "2024-01-15",
-    lastUpdated: "2024-01-15",
-    description:
-      "Desktop computer in patient room 302 won't power on. Red light blinking on power button. This is affecting patient care as we cannot access the electronic health records system. The issue started this morning around 8 AM. I've tried unplugging and plugging back in, but the problem persists.",
-    attachments: [],
-  })
-
-  const [comments, setComments] = useState([
-    {
-      id: 1,
-      author: "System",
-      authorRole: "system",
-      content: "Ticket created and assigned to IT Support queue.",
-      timestamp: "2024-01-15T08:30:00",
-      type: "system",
-    },
-    {
-      id: 2,
-      author: "Mike Chen",
-      authorRole: "it",
-      content:
-        "I've received this ticket and will investigate the issue. Will check the power supply and connections first.",
-      timestamp: "2024-01-15T09:15:00",
-      type: "comment",
-    },
-  ])
-
+  const params = useParams()
+  const ticketId = params.id
+  const { user } = useAuthStore()
+  const { staff, fetchStaff } = useAdminStore()
+  const [loading, setLoading] = useState(true)
+  const [ticket, setTicket] = useState();
+  const [comments, setComments] = useState([])
   const [newComment, setNewComment] = useState("")
   const [isSubmittingComment, setIsSubmittingComment] = useState(false)
   const [message, setMessage] = useState(null)
+  const { addComment } = useTicketStore()
 
-  // Sample agents for assignment
-  const agents = [
-    { id: 1, name: "Mike Chen", role: "it" },
-    { id: 2, name: "Robert Wilson", role: "admin" },
-  ]
+  useEffect(() => {
+    if (!ticketId || !user) {
+      router.push("/login")
+    }
+    const fecthTicket = async () => {
+      try {
+        const q = query(collection(db, "tickets"), where("ticketId", "==", ticketId))
+        const querySnapshot = await getDocs(q);
+        if (!querySnapshot.empty) {
+          const docSnap = querySnapshot.docs[0];
+          setTicket({ id: docSnap.id, ...docSnap.data() })
+          setComments(docSnap.data().comments || [])
+          await fetchStaff()
+        } else {
+          router.replace("/error")
+        }
+      } catch (error) {
+        console.log("Error loading ticket:", error)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fecthTicket()
+
+  }, [ticketId, user])
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+      </div>
+    );
+  }
+
+  // Sample ticket data - in real app, this would be fetched based on ticketId
+  // const [ticket, setTicket] = useState({
+  //   id: "TK-001",
+  //   title: "Computer won't start in Room 302",
+  //   status: "open",
+  //   priority: "high",
+  //   department: "Emergency Medicine",
+  //   submittedBy: "Dr. Sarah Johnson",
+  //   submittedByEmail: "sarah.johnson@hospital.com",
+  //   assignedTo: null,
+  //   dateSubmitted: "2024-01-15",
+  //   lastUpdated: "2024-01-15",
+  //   description:
+  //     "Desktop computer in patient room 302 won't power on. Red light blinking on power button. This is affecting patient care as we cannot access the electronic health records system. The issue started this morning around 8 AM. I've tried unplugging and plugging back in, but the problem persists.",
+  //   attachments: [
+  //     { id: 1, filename: "computer_issue.jpg", url: "/placeholder.jpg" },
+  //     { id: 2, filename: "error_log.txt", url: "/placeholder.txt" },
+  //   ],
+  // })
+
+  // const [comments, setComments] = useState([
+  //   {
+  //     id: 1,
+  //     author: "System",
+  //     authorRole: "system",
+  //     content: "Ticket created and assigned to IT Support queue.",
+  //     timestamp: "2024-01-15T08:30:00",
+  //     type: "system",
+  //   },
+  //   {
+  //     id: 2,
+  //     author: "Mike Chen",
+  //     authorRole: "it",
+  //     content:
+  //       "I've received this ticket and will investigate the issue. Will check the power supply and connections first.",
+  //     timestamp: "2024-01-15T09:15:00",
+  //     type: "comment",
+  //   },
+  // ])
+
+  const agents = staff.filter((user) => user.status === "approved" && (user.role === "it" || user.role === "admin"))
 
   const showToast = (type, text) => {
     setMessage({ type, text })
@@ -89,12 +137,12 @@ export default function TicketDetails({ ticketId = "TK-001", userRole = "Staff" 
     }
 
     const config = statusConfig[status]
-    const Icon = config.icon
+    const Icon = config?.icon || AlertCircle
 
     return (
-      <Badge className={`${config.color} flex items-center space-x-1 px-3 py-1`}>
+      <Badge className={`${config?.color} flex items-center space-x-1 px-3 py-1`}>
         <Icon className="w-4 h-4" />
-        <span className="capitalize">{status.replace("-", " ")}</span>
+        <span className="capitalize">{status?.replace("-", " ")}</span>
       </Badge>
     )
   }
@@ -149,22 +197,23 @@ export default function TicketDetails({ ticketId = "TK-001", userRole = "Staff" 
 
     setIsSubmittingComment(true)
 
-    // Simulate API call
-    setTimeout(() => {
-      const comment = {
-        id: comments.length + 1,
-        author: userRole === "Admin" ? "Admin User" : "Current User",
-        authorRole: userRole.toLowerCase(),
-        content: newComment,
-        timestamp: new Date().toISOString(),
-        type: "comment",
-      }
+    const comment = {
+      author: user.name,
+      authorEmail: user.email,
+      authorRole: user.role.toLowerCase(),
+      content: newComment.trim(),
+      type: "comment",
+    };
 
-      setComments([...comments, comment])
+    try {
+      await addComment(ticket.id, comment)
       setNewComment("")
-      setIsSubmittingComment(false)
       showToast("success", "Comment added successfully.")
-    }, 500)
+    } catch (error) {
+      showToast("error", "Failed to add comment")
+    } finally {
+      setIsSubmittingComment(false)
+    }
   }
 
   const formatTimestamp = (timestamp) => {
@@ -185,21 +234,21 @@ export default function TicketDetails({ ticketId = "TK-001", userRole = "Staff" 
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-green-50">
-      <Navbar userRole={userRole} />
+      <Navbar />
 
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center space-x-4">
-            <Link href={userRole === "Admin" ? "/admin" : "/my-tickets"}>
+            <Link href={user?.role === "Admin" ? "/admin" : "/my-tickets"}>
               <Button variant="outline" size="sm" className="flex items-center bg-transparent">
                 <ArrowLeft className="w-4 h-4 mr-2" />
-                Back to {userRole === "Admin" ? "Admin Panel" : "My Tickets"}
+                Back to {user?.role === "Admin" ? "Admin Panel" : "My Tickets"}
               </Button>
             </Link>
             <div>
               <h1 className="text-3xl font-bold text-gray-800">Ticket Details</h1>
-              <p className="text-gray-600">#{ticket.id}</p>
+              <p className="text-gray-600">#{ticket?.ticketId}</p>
             </div>
           </div>
         </div>
@@ -228,10 +277,10 @@ export default function TicketDetails({ ticketId = "TK-001", userRole = "Staff" 
               <CardHeader>
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
-                    <CardTitle className="text-2xl font-bold text-gray-800 mb-2">{ticket.title}</CardTitle>
+                    <CardTitle className="text-2xl font-bold text-gray-800 mb-2">{ticket?.title}</CardTitle>
                     <div className="flex items-center space-x-3">
-                      {getStatusBadge(ticket.status)}
-                      {getPriorityBadge(ticket.priority)}
+                      {getStatusBadge(ticket?.status)}
+                      {getPriorityBadge(ticket?.priority)}
                     </div>
                   </div>
                 </div>
@@ -243,8 +292,8 @@ export default function TicketDetails({ ticketId = "TK-001", userRole = "Staff" 
                     <User className="w-5 h-5 text-gray-400" />
                     <div>
                       <p className="text-sm font-medium text-gray-700">Submitted by</p>
-                      <p className="text-gray-600">{ticket.submittedBy}</p>
-                      <p className="text-sm text-gray-500">{ticket.submittedByEmail}</p>
+                      <p className="text-gray-600">{ticket?.submittedBy}</p>
+                      <p className="text-sm text-gray-500">{ticket?.submittedByEmail}</p>
                     </div>
                   </div>
 
@@ -252,7 +301,7 @@ export default function TicketDetails({ ticketId = "TK-001", userRole = "Staff" 
                     <Building className="w-5 h-5 text-gray-400" />
                     <div>
                       <p className="text-sm font-medium text-gray-700">Department</p>
-                      <p className="text-gray-600">{ticket.department}</p>
+                      <p className="text-gray-600">{ticket?.department}</p>
                     </div>
                   </div>
 
@@ -260,7 +309,7 @@ export default function TicketDetails({ ticketId = "TK-001", userRole = "Staff" 
                     <Calendar className="w-5 h-5 text-gray-400" />
                     <div>
                       <p className="text-sm font-medium text-gray-700">Date Submitted</p>
-                      <p className="text-gray-600">{new Date(ticket.dateSubmitted).toLocaleDateString()}</p>
+                      <p className="text-gray-600">{new Date(ticket?.dateSubmitted).toLocaleDateString()}</p>
                     </div>
                   </div>
 
@@ -268,7 +317,7 @@ export default function TicketDetails({ ticketId = "TK-001", userRole = "Staff" 
                     <Clock className="w-5 h-5 text-gray-400" />
                     <div>
                       <p className="text-sm font-medium text-gray-700">Last Updated</p>
-                      <p className="text-gray-600">{new Date(ticket.lastUpdated).toLocaleDateString()}</p>
+                      <p className="text-gray-600">{new Date(ticket?.lastUpdated).toLocaleDateString()}</p>
                     </div>
                   </div>
                 </div>
@@ -279,17 +328,45 @@ export default function TicketDetails({ ticketId = "TK-001", userRole = "Staff" 
                 <div>
                   <h3 className="text-lg font-semibold text-gray-800 mb-3">Description</h3>
                   <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                    <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">{ticket.description}</p>
+                    <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">{ticket?.description}</p>
                   </div>
                 </div>
+
+                {/* Attachments */}
+                {ticket?.attachments && ticket?.attachments.length > 0 && (
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-800 mb-3 flex items-center">
+                      <Paperclip className="w-5 h-5 mr-2" />
+                      Attachments
+                    </h3>
+                    <div className="space-y-2">
+                      {ticket?.attachments.map((attachment) => (
+                        <div
+                          key={attachment.id}
+                          className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200"
+                        >
+                          <span className="text-sm text-gray-700">{attachment.filename}</span>
+                          <a
+                            href={attachment.url}
+                            download
+                            className="text-blue-600 hover:text-blue-800 transition-colors"
+                            title="Download attachment"
+                          >
+                            <Download className="w-4 h-4" />
+                          </a>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 {/* Assignment Info */}
                 <div>
                   <h3 className="text-lg font-semibold text-gray-800 mb-3">Assignment</h3>
                   <div className="flex items-center space-x-2">
                     <span className="text-sm font-medium text-gray-700">Assigned to:</span>
-                    <span className={`text-sm ${ticket.assignedTo ? "text-gray-600" : "text-orange-600"}`}>
-                      {ticket.assignedTo || "Unassigned"}
+                    <span className={`text-sm ${ticket?.assignedTo ? "text-gray-600" : "text-orange-600"}`}>
+                      {agents.find((a) => a.id === ticket.assignedTo)?.name || "Unassigned"}
                     </span>
                   </div>
                 </div>
@@ -327,11 +404,10 @@ export default function TicketDetails({ ticketId = "TK-001", userRole = "Staff" 
                           <span className="text-xs text-gray-500">{formatTimestamp(comment.timestamp)}</span>
                         </div>
                         <div
-                          className={`text-sm p-3 rounded-lg ${
-                            comment.type === "system"
-                              ? "bg-blue-50 border border-blue-200 text-blue-800"
-                              : "bg-gray-50 border border-gray-200 text-gray-700"
-                          }`}
+                          className={`text-sm p-3 rounded-lg ${comment.type === "system"
+                            ? "bg-blue-50 border border-blue-200 text-blue-800"
+                            : "bg-gray-50 border border-gray-200 text-gray-700"
+                            }`}
                         >
                           {comment.content}
                         </div>
@@ -370,7 +446,7 @@ export default function TicketDetails({ ticketId = "TK-001", userRole = "Staff" 
           {/* Sidebar */}
           <div className="space-y-6">
             {/* Admin Actions */}
-            {userRole === "Admin" && (
+            {user?.role === "Admin" && (
               <Card className="shadow-lg border-0">
                 <CardHeader>
                   <CardTitle className="text-lg font-semibold text-gray-800 flex items-center">
@@ -382,7 +458,7 @@ export default function TicketDetails({ ticketId = "TK-001", userRole = "Staff" 
                   {/* Status Update */}
                   <div>
                     <Label className="text-sm font-medium text-gray-700 mb-2 block">Update Status</Label>
-                    <Select value={ticket.status} onValueChange={handleStatusChange}>
+                    <Select value={ticket?.status} onValueChange={handleStatusChange}>
                       <SelectTrigger className="border-gray-300 focus:border-blue-500 focus:ring-blue-500">
                         <SelectValue />
                       </SelectTrigger>
@@ -399,7 +475,7 @@ export default function TicketDetails({ ticketId = "TK-001", userRole = "Staff" 
                     <Label className="text-sm font-medium text-gray-700 mb-2 block">Assign Agent</Label>
                     <Select
                       value={
-                        ticket.assignedTo ? agents.find((a) => a.name === ticket.assignedTo)?.id.toString() || "0" : "0"
+                        ticket?.assignedTo ? agents.find((a) => a.name === ticket?.assignedTo)?.id.toString() || "0" : "0"
                       }
                       onValueChange={handleAssignTicket}
                     >
@@ -428,15 +504,15 @@ export default function TicketDetails({ ticketId = "TK-001", userRole = "Staff" 
               <CardContent className="space-y-3">
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-gray-600">Status</span>
-                  {getStatusBadge(ticket.status)}
+                  {getStatusBadge(ticket?.status)}
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-gray-600">Priority</span>
-                  {getPriorityBadge(ticket.priority)}
+                  {getPriorityBadge(ticket?.priority)}
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-gray-600">Assigned to</span>
-                  <span className="text-sm font-medium">{ticket.assignedTo || "Unassigned"}</span>
+                  <span className="text-sm font-medium">{agents.find((a) => a.id === ticket.assignedTo)?.name || "Unassigned"}</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-gray-600">Comments</span>
@@ -451,12 +527,12 @@ export default function TicketDetails({ ticketId = "TK-001", userRole = "Staff" 
                 <CardTitle className="text-lg font-semibold text-gray-800">Quick Actions</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                <Link href={userRole === "Admin" ? "/admin" : "/my-tickets"}>
+                <Link href={user?.role === "Admin" ? "/admin" : "/my-tickets"}>
                   <Button variant="outline" className="w-full bg-transparent">
-                    Back to {userRole === "Admin" ? "Admin Panel" : "My Tickets"}
+                    Back to {user?.role === "Admin" ? "Admin Panel" : "My Tickets"}
                   </Button>
                 </Link>
-                {userRole !== "Admin" && (
+                {user?.role !== "Admin" && (
                   <Link href="/submit-ticket">
                     <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white">Submit New Ticket</Button>
                   </Link>

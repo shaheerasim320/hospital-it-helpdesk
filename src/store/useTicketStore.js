@@ -31,9 +31,18 @@ const useTicketStore = create((set, get) => ({
 
   createTicket: async (ticketData, attachments) => {
     try {
+      const generateReadableTicketId = async () => {
+        const snapshot = await getDocs(collection(db, "tickets"));
+        const count = snapshot.size + 1;
+        const year = new Date().getFullYear();
+        return `TCK-${year}-${String(count).padStart(4, "0")}`;
+      };
+
+      const readableTicketId = await generateReadableTicketId();
 
       const initialTicket = {
         ...ticketData,
+        ticketId: readableTicketId,
         status: "open",
         attachments: [],
         assignedTo: null,
@@ -58,29 +67,38 @@ const useTicketStore = create((set, get) => ({
         attachmentURLs = await uploadFilesToStorage(attachments, docRef.id);
       }
 
-      await updateDoc(doc(db,"tickets",docRef.id),{
-        id:docRef.id,
-        attachments:attachmentURLs
-      })
+      await updateDoc(doc(db, "tickets", docRef.id), {
+        id: docRef.id,
+        attachments: attachmentURLs,
+      });
 
       set((state) => ({
-        tickets: [{ id: docRef.id, ...initialTicket,attachments:attachmentURLs,createdAt:new Date()}, ...state.tickets],
+        tickets: [
+          {
+            id: docRef.id,
+            ...initialTicket,
+            attachments: attachmentURLs,
+            createdAt: new Date(),
+          },
+          ...state.tickets,
+        ],
       }));
 
-      await fetch("/api/send-ticket-email",{
-        method:"POST",
-        headers:{ "Content-Type": "application/json" },
-        body:JSON.stringify({
-          email:ticketData.submittedByEmail,
-          name:ticketData.submittedBy,
-          title:ticketData.title,
-          ticketId:docRef.id
-        })
-      })
+      await fetch("/api/send-ticket-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: ticketData.submittedByEmail,
+          name: ticketData.submittedBy,
+          title: ticketData.title,
+          ticketId: readableTicketId,
+        }),
+      });
     } catch (err) {
       console.error("Error creating ticket:", err);
     }
   },
+
 
 
   updateTicketStatus: async (ticketId, status) => {
@@ -123,9 +141,11 @@ const useTicketStore = create((set, get) => ({
 
   addComment: async (ticketId, comment) => {
     try {
+      await get().fetchTickets();
       const state = get();
       const ticketRef = doc(db, "tickets", ticketId);
       const targetTicket = state.tickets.find((t) => t.id === ticketId);
+      console.log(targetTicket)
       const updatedComments = [
         ...(targetTicket.comments || []),
         {

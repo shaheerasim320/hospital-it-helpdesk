@@ -1,50 +1,98 @@
+"use client"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Plus, Calendar, Building, AlertCircle, Clock, CheckCircle } from "lucide-react"
+import { Plus, Calendar, Building, AlertCircle, Clock, CheckCircle, Loader2 } from "lucide-react"
 import Navbar from "../../components/navbar"
+import { useRouter } from "next/navigation"
+import { useEffect, useState } from "react"
+import useAuthStore from "@/store/useAuthStore"
+import { collection, getDocs, query, where } from "firebase/firestore"
+import { db } from "../lib/firebase"
 
 export default function MyTickets() {
-  // Sample ticket data
-  const tickets = [
-    {
-      id: "TK-001",
-      title: "Computer won't start in Room 302",
-      status: "open",
-      priority: "high",
-      department: "Emergency Medicine",
-      dateSubmitted: "2024-01-15",
-      description: "Desktop computer in patient room 302 won't power on. Red light blinking on power button.",
-    },
-    {
-      id: "TK-002",
-      title: "Printer offline in Radiology",
-      status: "in-progress",
-      priority: "medium",
-      department: "Radiology",
-      dateSubmitted: "2024-01-14",
-      description: "Main printer showing offline status, unable to print patient reports.",
-    },
-    {
-      id: "TK-003",
-      title: "Email not syncing on mobile device",
-      status: "resolved",
-      priority: "low",
-      department: "Cardiology",
-      dateSubmitted: "2024-01-12",
-      description: "Hospital email not syncing properly on iPhone, missing recent messages.",
-    },
-    {
-      id: "TK-004",
-      title: "Software license expired",
-      status: "open",
-      priority: "medium",
-      department: "Pharmacy",
-      dateSubmitted: "2024-01-10",
-      description: "Pharmacy management software showing license expiration warning.",
-    },
-  ]
+  const router = useRouter();
+  const [tickets, setTickets] = useState([])
+  const [loading, setLoading] = useState(true);
+  const { user } = useAuthStore()
+
+  useEffect(() => {
+    async function fetchTickets() {
+      if (!user) {
+        router.push("/login");
+        return;
+      }
+
+      try {
+        const q = query(
+          collection(db, "tickets"),
+          where("submittedByEmail", "==", user.email)
+        );
+        const snapshot = await getDocs(q);
+        const userTickets = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
+        setTickets(userTickets);
+      } catch (error) {
+        console.error("Error fetching tickets:", error);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchTickets();
+  }, [user, router]);
+
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+      </div>
+    );
+  }
+
+  // // Sample ticket data
+  // const tickets = [
+  //   {
+  //     id: "TK-001",
+  //     title: "Computer won't start in Room 302",
+  //     status: "open",
+  //     priority: "high",
+  //     department: "Emergency Medicine",
+  //     dateSubmitted: "2024-01-15",
+  //     description: "Desktop computer in patient room 302 won't power on. Red light blinking on power button.",
+  //   },
+  //   {
+  //     id: "TK-002",
+  //     title: "Printer offline in Radiology",
+  //     status: "in-progress",
+  //     priority: "medium",
+  //     department: "Radiology",
+  //     dateSubmitted: "2024-01-14",
+  //     description: "Main printer showing offline status, unable to print patient reports.",
+  //   },
+  //   {
+  //     id: "TK-003",
+  //     title: "Email not syncing on mobile device",
+  //     status: "resolved",
+  //     priority: "low",
+  //     department: "Cardiology",
+  //     dateSubmitted: "2024-01-12",
+  //     description: "Hospital email not syncing properly on iPhone, missing recent messages.",
+  //   },
+  //   {
+  //     id: "TK-004",
+  //     title: "Software license expired",
+  //     status: "open",
+  //     priority: "medium",
+  //     department: "Pharmacy",
+  //     dateSubmitted: "2024-01-10",
+  //     description: "Pharmacy management software showing license expiration warning.",
+  //   },
+  // ]
 
   const getStatusBadge = (status) => {
     const statusConfig = {
@@ -103,7 +151,7 @@ export default function MyTickets() {
                     <CardTitle className="text-lg font-semibold text-gray-800 mb-2 line-clamp-2">
                       {ticket.title}
                     </CardTitle>
-                    <div className="text-sm text-gray-500 mb-3">Ticket #{ticket.id}</div>
+                    <div className="text-sm text-gray-500 mb-3">Ticket #{ticket.ticketId}</div>
                   </div>
                 </div>
 
@@ -130,7 +178,7 @@ export default function MyTickets() {
                   </div>
 
                   <div className="pt-3 border-t border-gray-200">
-                    <Link href={`/ticket/${ticket.id}`}>
+                    <Link href={`/ticket/${ticket.ticketId}`}>
                       <Button
                         variant="outline"
                         size="sm"

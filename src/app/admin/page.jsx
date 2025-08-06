@@ -26,6 +26,7 @@ import {
   Calendar,
   Building,
   Loader2,
+  Clipboard,
 } from "lucide-react";
 
 import Navbar from "../../components/navbar"
@@ -406,7 +407,7 @@ export default function AdminDashboard() {
 
         {/* Tabs for different admin sections */}
         <Tabs defaultValue="tickets" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3 lg:w-[600px]">
+          <TabsList className="grid w-full grid-cols-1 gap-2 md:gap-0 md:grid-cols-3 lg:w-[600px] h-full">
             <TabsTrigger value="tickets" className="flex items-center space-x-2">
               <Ticket className="w-4 h-4" />
               <span>Ticket Management</span>
@@ -415,8 +416,8 @@ export default function AdminDashboard() {
               <Users className="w-4 h-4" />
               <span>User Management</span>
             </TabsTrigger>
-            <TabsTrigger value="assigned" className="flex items-center space-x-2">
-              <UserCheck className="w-4 h-4" />
+            <TabsTrigger value="assigned-to-me" className="flex items-center space-x-2">
+              <Clipboard className="w-4 h-4" />
               <span>Assigned to Me</span>
             </TabsTrigger>
           </TabsList>
@@ -872,8 +873,8 @@ export default function AdminDashboard() {
             </Card>
           </TabsContent>
 
-          <TabsContent value="assigned">
-            <AssignedTicketsList showNavbar={false} showButton={true} />
+          <TabsContent value="assigned-to-me">
+            <AssignedTicketsList showNavbar={false} showButton={true} fromAdmin={true} />
           </TabsContent>
         </Tabs>
       </div>

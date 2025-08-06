@@ -35,10 +35,10 @@ export default function LandingPage() {
           <div className="flex justify-between items-center h-16">
             {/* Logo */}
             <div className="flex items-center">
-              <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center mr-3">
-                <Monitor className="w-5 h-5 text-white" />
+              <div className="md:w-8 md:h-8 w-6 h-6 bg-blue-600 rounded-lg flex items-center justify-center mr-3">
+                <Monitor className="md:w-5 md:h-5 h-4 text-white" />
               </div>
-              <span className="text-xl font-bold text-gray-800">Hospital IT Help Desk</span>
+              <span className="md:text-xl text-sm font-bold text-gray-800">Hospital IT Help Desk</span>
             </div>
 
             {/* Auth buttons */}

@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Search, Filter, Calendar, Building, AlertCircle, Clock, CheckCircle, User, Eye, Plus } from "lucide-react"
 import Navbar from "./navbar"
 
-const AssignedTicketsList = ({ user, showNavbar, showButton }) => {
+const AssignedTicketsList = ({ user, showNavbar, showButton, fromAdmin = false }) => {
     const [searchTerm, setSearchTerm] = useState("")
     const [filterStatus, setFilterStatus] = useState("all")
     const [filterPriority, setFilterPriority] = useState("all")
@@ -139,23 +139,25 @@ const AssignedTicketsList = ({ user, showNavbar, showButton }) => {
         <div className="min-h-screen bg-gradient-to-br from-blue-50 to-green-50">
             {showNavbar ? <Navbar userRole="IT" /> : ""}
 
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                {/* Header */}
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-8">
-                    <div>
-                        <h1 className="text-3xl font-bold text-gray-800 mb-2">My Assigned Tickets</h1>
-                        <p className="text-gray-600">Tickets currently assigned to you for resolution</p>
-                    </div>
-                    {showButton && (
-                        <Link href="/submit-ticket">
-                            <Button className="mt-4 sm:mt-0 bg-blue-600 hover:bg-blue-700 text-white">
-                                <Plus className="w-4 h-4 mr-2" />
-                                Create New Ticket
-                            </Button>
-                        </Link>
-                    )}
+            <div className={`max-w-7xl mx-auto ${fromAdmin == true ? "" : "lg:px-8 sm:px-6 px-4 py-8"}`}>
+                {fromAdmin != true && (
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-8">
+                        <div>
+                            <h1 className="text-3xl font-bold text-gray-800 mb-2">My Assigned Tickets</h1>
+                            <p className="text-gray-600">Tickets currently assigned to you for resolution</p>
+                        </div>
+                        {showButton && (
+                            <Link href="/submit-ticket">
+                                <Button className="mt-4 sm:mt-0 bg-blue-600 hover:bg-blue-700 text-white">
+                                    <Plus className="w-4 h-4 mr-2" />
+                                    Create New Ticket
+                                </Button>
+                            </Link>
+                        )}
 
-                </div>
+                    </div>
+                )}
+
 
                 {/* Stats Cards */}
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">

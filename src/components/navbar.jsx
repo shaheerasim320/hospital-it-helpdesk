@@ -4,13 +4,13 @@ import { useState } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Menu, X, Monitor, Home, FileText, Clipboard, Settings, LogOut } from "lucide-react"
-import useAuthStore from "@/store/useAuthStore"
+import useUserStore from "@/store/useUserStore"
 import { useRouter } from "next/navigation"
 
 export default function Navbar() {
   const router = useRouter()
   const [isOpen, setIsOpen] = useState(false)
-  const { user, logout } = useAuthStore()
+  const { user, logout } = useUserStore()
 
   const handleLogout = () => {
     logout()

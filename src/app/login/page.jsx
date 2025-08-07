@@ -18,11 +18,11 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { Stethoscope, Monitor, Shield, Headphones } from "lucide-react"
-import useAuthStore from "@/store/useAuthStore"
+import useUserStore from "@/store/useUserStore"
 import { doc, getDoc, serverTimestamp, updateDoc } from "firebase/firestore"
 
 export default function LoginPage() {
-  const setUser = useAuthStore((state) => state.setUser)
+  const setUser = useUserStore((state) => state.setUser)
   const router = useRouter()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
@@ -70,6 +70,19 @@ export default function LoginPage() {
         status: userData.status,
         department: userData.department,
       });
+
+      const response = await fetch("/api/login", {
+        method: "POST",
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ uid: userData.uid, role: userData.role }),
+      })
+
+      if (!response.ok) {
+        toast.error("Something went wrong. Please try again!")
+        setEmail("")
+        setPassword("")
+        return
+      }
 
       toast.success("Login successful!");
 

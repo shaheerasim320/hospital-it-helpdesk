@@ -1,5 +1,5 @@
 import AssignedTicketsList from "@/components/AssignedTicketsList"
-import ProtectedRoute from "@/components/protectedRoute"
+import ProtectedRoute from "@/components/ProtectedRoute"
 import { getUserFromToken } from "@/lib/auth"
 
 export default async function MyAssignedTickets() {

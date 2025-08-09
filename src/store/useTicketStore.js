@@ -10,6 +10,7 @@ import {
   where,
   orderBy,
   limit,
+  onSnapshot,
 } from "firebase/firestore";
 import { db } from "@/app/lib/firebase";
 import { uploadFilesToCloudinary } from "@/app/utils/uploadFilesToCloudinary";
@@ -19,6 +20,8 @@ const useTicketStore = create((set, get) => ({
   loading: false,
   error: null,
   recentTickets: [],
+  assignedTickets: [],
+  openTickets: [],
 
   fetchTickets: async () => {
     set({ loading: true, error: null });
@@ -43,9 +46,9 @@ const useTicketStore = create((set, get) => ({
         const year = new Date().getFullYear();
         return `TCK-${year}-${String(count).padStart(4, "0")}`;
       };
-  
+
       const readableTicketId = await generateReadableTicketId();
-  
+
       const newTicket = {
         ...ticketData,
         ticketId: readableTicketId,
@@ -65,9 +68,9 @@ const useTicketStore = create((set, get) => ({
           },
         ],
       };
-  
+
       const docRef = await addDoc(collection(db, "tickets"), newTicket);
-  
+
       let attachmentURLs = [];
       if (attachments && attachments.length > 0) {
         attachmentURLs = await uploadFilesToCloudinary(attachments);
@@ -76,14 +79,14 @@ const useTicketStore = create((set, get) => ({
           lastUpdated: new Date().toISOString(),
         });
       }
-  
+
       set((state) => ({
         tickets: [
           { id: docRef.id, ...newTicket, attachments: attachmentURLs },
           ...state.tickets,
         ],
       }));
-  
+
       await fetch("/api/send-ticket-email", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -94,13 +97,13 @@ const useTicketStore = create((set, get) => ({
           ticketId: readableTicketId,
         }),
       });
-  
+
       await get().fetchRecentTickets(ticketData.submittedByEmail);
-  
+
     } catch (err) {
       console.error("Error creating ticket:", err);
     }
-  },  
+  },
 
 
 
@@ -197,7 +200,57 @@ const useTicketStore = create((set, get) => ({
       console.error("Error fetching recent tickets:", err);
       set({ error: "Failed to fetch recent tickets", loading: false });
     }
+  },
+  subscribeAssignedTickets: async (id) => {
+    if (get().assignedTicketsUnsubscribe) {
+      get().assignedTicketsUnsubscribe();
+    }
+    const q = query(collection(db, "tickets"), where("assignedTo", "==", id));
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const tickets = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      set({ assignedTickets: tickets });
+    }, (error) => {
+      console.error("Error fetching assigned tickets:", error);
+      set({ error: "Failed to load tickets" });
+    });
+    set({ assignedTicketsUnsubscribe: unsubscribe });
+  },
+  unsubscribeAssignedTickets: () => {
+    if (get().assignedTicketsUnsubscribe) {
+      get().assignedTicketsUnsubscribe();
+      set({ assignedTicketsUnsubscribe: null })
+    }
+  },
+  subscribeOpenTickets: () => {
+    if (get().openTicketsUnsubscribe) {
+      get().openTicketsUnsubscribe();
+    }
+
+    const q = query(
+      collection(db, "tickets"),
+      where("status", "==", "open"),
+      where("assignedTo", "==", null)
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const tickets = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      set({ openTickets: tickets });
+    }, (error) => {
+      console.error("Error fetching open tickets:", error);
+      set({ error: "Failed to load open tickets" });
+    });
+
+    set({ openTicketsUnsubscribe: unsubscribe });
+  },
+
+  unsubscribeOpenTickets: () => {
+    if (get().openTicketsUnsubscribe) {
+      get().openTicketsUnsubscribe();
+      set({ openTicketsUnsubscribe: null });
+    }
   }
+
 }));
 
 export default useTicketStore;

@@ -20,7 +20,7 @@ export default function Navbar() {
   const userRole = user?.role || "Guest"
   const userName = user?.name || "Unknown"
 
-  const ticketLinkText = userRole == "IT Support" ? "Tickets to Resolve" : "My Tickets";
+  const ticketLinkText = userRole == "IT Support" || userRole == "Admin" ? "Tickets to Resolve" : "My Tickets";
 
   return (
     <nav className="bg-white shadow-lg border-b border-gray-200">
@@ -39,7 +39,7 @@ export default function Navbar() {
           {/* Desktop navigation */}
           <div className="hidden md:flex items-center space-x-4">
             <Link
-              href={userRole == "Admin".toLowerCase() ? "/admin" : "/dashboard"}
+              href={userRole == "Admin" ? "/admin" : "/dashboard"}
               className="flex items-center px-3 py-2 text-gray-700 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
             >
               <Home className="w-4 h-4 mr-2" />
@@ -55,7 +55,7 @@ export default function Navbar() {
               </Link>
             )}
             <Link
-              href={userRole == "IT Support" ? "/my-assigned-tickets" : "/my-tickets"}
+              href={userRole == "IT Support" || userRole == "Admin" ? "/my-assigned-tickets" : "/my-tickets"}
               className="flex items-center px-3 py-2 text-gray-700 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
             >
               <Clipboard className="w-4 h-4 mr-2" />
@@ -92,7 +92,7 @@ export default function Navbar() {
           <div className="md:hidden">
             <div className="px-2 pt-2 pb-3 space-y-1 bg-gray-50 border-t border-gray-200">
               <Link
-                href={userRole == "Admin".toLowerCase() ? "/admin" : "/dashboard"}
+                href={userRole == "Admin" ? "/admin" : "/dashboard"}
                 className="flex items-center px-3 py-2 text-gray-700 hover:text-blue-600 hover:bg-blue-50 rounded-md"
               >
                 <Home className="w-4 h-4 mr-3" />
@@ -109,7 +109,7 @@ export default function Navbar() {
               )}
 
               <Link
-                href={userRole == "IT Support" ? "/my-assigned-tickets" : "/my-tickets"}
+                href={userRole == "IT Support" || userRole == "Admin" ? "/my-assigned-tickets" : "/my-tickets"}
                 className="flex items-center px-3 py-2 text-gray-700 hover:text-blue-600 hover:bg-blue-50 rounded-md"
               >
                 <Clipboard className="w-4 h-4 mr-3" />

@@ -26,6 +26,7 @@ import {
   Paperclip,
   Download,
   Loader2,
+  Settings,
 } from "lucide-react"
 import Navbar from "./navbar"
 import { collection, getDoc, getDocs, query, where } from "firebase/firestore"
@@ -41,7 +42,9 @@ export default function TicketDetailsContent() {
   const { user } = useAuthStore()
   const { staff, fetchStaff } = useAdminStore()
   const [loading, setLoading] = useState(true)
-  const [ticket, setTicket] = useState();
+  const [ticket, setTicket] = useState()
+  const [selectedFiles, setSelectedFiles] = useState([])
+  const [isUploading, setIsUploading] = useState(false)
   const [comments, setComments] = useState([])
   const [newComment, setNewComment] = useState("")
   const [isSubmittingComment, setIsSubmittingComment] = useState(false)
@@ -119,9 +122,8 @@ export default function TicketDetailsContent() {
   }
 
   const handleStatusChange = (newStatus) => {
-    setTicket({ ...ticket, status: newStatus, lastUpdated: new Date().toISOString().split("T")[0] })
+    setTicket({ ...ticket, status: newStatus, lastUpdated: new Date().toISOString()})
 
-    // Add system comment for status change
     const systemComment = {
       id: comments.length + 1,
       author: "System",
@@ -137,9 +139,8 @@ export default function TicketDetailsContent() {
 
   const handleAssignTicket = (agentId) => {
     const agent = agents.find((a) => a.id === Number.parseInt(agentId))
-    setTicket({ ...ticket, assignedTo: agent ? agent.name : null, lastUpdated: new Date().toISOString().split("T")[0] })
+    setTicket({ ...ticket, assignedTo: agent ? agent.name : null, lastUpdated: new Date().toISOString()})
 
-    // Add system comment for assignment
     const systemComment = {
       id: comments.length + 1,
       author: "System",
@@ -180,6 +181,37 @@ export default function TicketDetailsContent() {
     }
   }
 
+  const handleAttachmentsChange = (e) => {
+    setSelectedFiles(Array.from(e.target.files));
+  };
+
+  const handleUploadAttachments = async () => {
+    if (selectedFiles.length === 0) return;
+
+    setIsUploading(true);
+    try {
+
+      const uploadedURLs = await uploadFilesToCloudinary(selectedFiles, ticket.id);
+      const updatedAttachments = [...(ticket.attachments || []), ...uploadedURLs];
+
+      await updateDoc(doc(db, "tickets", ticket.id), {
+        attachments: updatedAttachments,
+        lastUpdated: new Date().toISOString(),
+      });
+
+      setTicket((prev) => ({
+        ...prev,
+        attachments: updatedAttachments,
+        lastUpdated: new Date().toISOString(),
+      }));
+
+      setSelectedFiles([]);
+    } catch (error) {
+      console.error("Attachment upload failed", error);
+    } finally {
+      setIsUploading(false);
+    }
+  };
 
   const formatTimestamp = (timestamp) => {
     return new Date(timestamp).toLocaleString()
@@ -205,10 +237,10 @@ export default function TicketDetailsContent() {
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center space-x-4">
-            <Link href={user?.role === "Admin" ? "/admin" : "/my-tickets"}>
+            <Link href={user?.role === "Admin" ? "/admin" : user?.role === "IT Support" ? "/my-assigned-tickets" : "/my-tickets"}>
               <Button variant="outline" size="sm" className="flex items-center bg-transparent">
                 <ArrowLeft className="w-4 h-4 mr-2" />
-                Back to {user?.role === "Admin" ? "Admin Panel" : "My Tickets"}
+                Back to {user?.role === "Admin" ? "Admin Panel" : user?.role === "IT Support" ? "My Assigned Tickets" : "My Tickets"}
               </Button>
             </Link>
             <div>
@@ -306,7 +338,7 @@ export default function TicketDetailsContent() {
                     </h3>
                     <div className="space-y-2">
                       {(ticket?.attachments || []).map((url, index) => {
-                        const filename = url.split("/").pop(); // extract filename from URL
+                        const filename = url.split("/").pop();
                         return (
                           <div
                             key={index}
@@ -464,6 +496,58 @@ export default function TicketDetailsContent() {
               </Card>
             )}
 
+            {/* IT Support Actions */}
+            {user?.role === "IT Support" && ticket.assignedTo===user?.id && (
+              <Card className="shadow-lg border-0">
+                <CardHeader>
+                  <CardTitle className="text-lg font-semibold text-gray-800 flex items-center">
+                    <Settings className="w-5 h-5 mr-2" />
+                    IT Support Actions
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {/* Status Update */}
+                  <div>
+                    <Label className="text-sm font-medium text-gray-700 mb-2 block">Update Status</Label>
+                    <Select value={ticket?.status} onValueChange={handleStatusChange}>
+                      <SelectTrigger className="border-gray-300 focus:border-blue-500 focus:ring-blue-500">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="open">Open</SelectItem>
+                        <SelectItem value="in-progress">In Progress</SelectItem>
+                        <SelectItem value="resolved">Resolved</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Attachments Upload */}
+                  <div>
+                    <Label className="text-sm font-medium text-gray-700 mb-2 block">Add Attachments</Label>
+                    <input
+                      type="file"
+                      multiple
+                      onChange={handleAttachmentsChange}
+                      className="block w-full text-sm text-gray-500
+                       file:mr-4 file:py-2 file:px-4
+                       file:rounded file:border-0
+                       file:text-sm file:font-semibold
+                       file:bg-blue-50 file:text-blue-700
+                       hover:file:bg-blue-100"
+                    />
+                  </div>
+
+                  <Button
+                    onClick={handleUploadAttachments}
+                    disabled={isUploading}
+                    className="bg-blue-600 hover:bg-blue-700 text-white"
+                  >
+                    {isUploading ? "Uploading..." : "Upload Attachments"}
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
+
             {/* Ticket Summary */}
             <Card className="shadow-lg border-0">
               <CardHeader>
@@ -495,12 +579,12 @@ export default function TicketDetailsContent() {
                 <CardTitle className="text-lg font-semibold text-gray-800">Quick Actions</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                <Link href={user?.role === "Admin" ? "/admin" : "/my-tickets"}>
+                <Link href={user?.role === "Admin" ? "/admin" : user?.role === "IT Support" ? "/my-assigned-tickets" : "/my-tickets"}>
                   <Button variant="outline" className="w-full bg-transparent">
-                    Back to {user?.role === "Admin" ? "Admin Panel" : "My Tickets"}
+                    Back to {user?.role === "Admin" ? "Admin Panel" : user?.role === "IT Support" ? "My Assigned Tickets" : "My Tickets"}
                   </Button>
                 </Link>
-                {user?.role !== "Admin" && (
+                {user?.role !== "Admin" || user?.role !== "IT Support" && (
                   <Link href="/submit-ticket">
                     <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white">Submit New Ticket</Button>
                   </Link>

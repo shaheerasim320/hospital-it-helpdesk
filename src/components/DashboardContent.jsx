@@ -13,29 +13,27 @@ import useTicketStore from "@/store/useTicketStore"
 
 export default function DashboardContent() {
     const { user } = useAuthStore();
-    const { fetchRecentTickets, recentTickets } = useTicketStore();
-    const [assignedTickets, setAssignedTickets] = useState([])
+    const { fetchRecentTickets, recentTickets, assignedTickets, subscribeAssignedTickets, unsubscribeAssignedTickets, openTickets, subscribeOpenTickets, unsubscribeOpenTickets } = useTicketStore();
+    // const [assignedTickets, setAssignedTickets] = useState([])
     const [ticketStats, setTicketStats] = useState({ open: 0, inProgress: 0, resolved: 0 })
     const router = useRouter()
 
     useEffect(() => {
         if (user) {
-            if (user?.role === "admin") {
-                router.push("/admin")
-                return
-            }
-
             if (user?.role === "IT Support") {
-                fetchAssignedTickets(user?.email)
+                subscribeAssignedTickets(user.id)
+                subscribeOpenTickets()
                 fetchTicketStats()
             } else {
                 fetchRecentTickets(user?.email)
             }
         }
+        return () => {
+            unsubscribeAssignedTickets()
+            unsubscribeOpenTickets()
+        }
     }, [user])
 
-
-    // Different quick actions based on role
     const getQuickActions = (role) => {
         if (role === "IT Support") {
             return [
@@ -86,23 +84,31 @@ export default function DashboardContent() {
         }
     }
 
-    // const fetchRecentTickets = async (email) => {
-    //     try {
-    //         // Mock data for user's own tickets
-    //         const mockData = [
-    //             { id: 1, subject: "Printer not working", date: "2025-08-02", status: "open" },
-    //             { id: 2, subject: "Email sync issue", date: "2025-08-01", status: "in-progress" },
-    //             { id: 3, subject: "Software license expired", date: "2025-07-30", status: "resolved" },
-    //         ]
-    //         setRecentTickets(mockData)
-    //     } catch (err) {
-    //         console.error("Failed to fetch tickets:", err)
-    //     }
-    // }
+    const getDepartmentInfo = (departmentValue) => {
+        const departments = {
+            emergency: "Emergency Medicine",
+            radiology: "Radiology",
+            cardiology: "Cardiology",
+            neurology: "Neurology",
+            oncology: "Oncology",
+            orthopedics: "Orthopedics",
+            pediatrics: "Pediatrics",
+            pharmacy: "Pharmacy",
+            laboratory: "Laboratory",
+            surgery: "Surgery",
+            icu: "Intensive Care Unit (ICU)",
+            it: "Information Technology (IT)",
+            hr: "Human Resources (HR)",
+            administration: "Administration",
+            facilities: "Facilities & Maintenance",
+            billing: "Billing & Insurance",
+        };
+
+        return departments[departmentValue] || "Unknown Department";
+    };
 
     const fetchAssignedTickets = async (email) => {
         try {
-            // Mock data for IT staff assigned tickets
             const mockData = [
                 {
                     id: "TK-001",
@@ -129,7 +135,7 @@ export default function DashboardContent() {
                     date: "2025-07-31",
                 },
             ]
-            setAssignedTickets(mockData)
+            // setAssignedTickets(mockData)
         } catch (err) {
             console.error("Failed to fetch assigned tickets:", err)
         }
@@ -137,11 +143,16 @@ export default function DashboardContent() {
 
     const fetchTicketStats = async () => {
         try {
-            // Mock stats for admin/IT
-            setTicketStats({ open: 12, inProgress: 8, resolved: 45 })
+            const res = await fetch("/api/fetch-tickets-stats");
+            if (!res.ok) setTicketStats({ open: 0, inProgress: 0, resolved: 0 })
+
+            const stats = await res.json();
+            // Now stats = { open: X, inProgress: Y, resolvedToday: Z }
+            setTicketStats(stats);  // or however you store in Zustand / React state
         } catch (err) {
-            console.error("Failed to fetch ticket stats:", err)
+            console.error(err);
         }
+
     }
 
     const getPriorityBadge = (priority) => {
@@ -290,7 +301,7 @@ export default function DashboardContent() {
                                     </CardTitle>
                                 </CardHeader>
                                 <CardContent>
-                                    <div className="text-3xl font-bold text-green-600 mb-2">7</div>
+                                    <div className="text-3xl font-bold text-green-600 mb-2">{ticketStats.resolved}</div>
                                     <p className="text-sm text-gray-600">Completed tickets</p>
                                 </CardContent>
                             </Card>
@@ -307,27 +318,31 @@ export default function DashboardContent() {
                             <CardContent>
                                 {assignedTickets.length > 0 ? (
                                     <div className="space-y-3">
-                                        {assignedTickets.map((ticket) => (
-                                            <div key={ticket.id} className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                                                <div className="flex items-start justify-between">
-                                                    <div className="flex-1">
-                                                        <div className="flex items-center space-x-2 mb-2">
-                                                            <h3 className="font-medium text-gray-800">#{ticket.id}</h3>
-                                                            {getPriorityBadge(ticket.priority)}
+                                        {assignedTickets.map((ticket) => {
+                                            const departmentInfo = getDepartmentInfo(ticket.department)
+                                            return (
+                                                <div key={ticket.id} className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                                                    <div className="flex items-start justify-between">
+                                                        <div className="flex-1">
+                                                            <div className="flex items-center space-x-2 mb-2">
+                                                                <h3 className="font-medium text-gray-800">#{ticket.ticketId}</h3>
+                                                                {getPriorityBadge(ticket.priority)}
+                                                            </div>
+                                                            <p className="text-sm font-medium text-gray-700 mb-1">{ticket.title}</p>
+                                                            <p className="text-xs text-gray-600">
+                                                                Submitted by {ticket.submittedBy} • {departmentInfo} • {new Date(ticket.dateSubmitted).toLocaleString("en-us", { year: "numeric", month: "short", day: "numeric", hour: "numeric", minute: "2-digit", hour12: true })}
+                                                            </p>
                                                         </div>
-                                                        <p className="text-sm font-medium text-gray-700 mb-1">{ticket.subject}</p>
-                                                        <p className="text-xs text-gray-600">
-                                                            Submitted by {ticket.submittedBy} • {ticket.department} • {ticket.date}
-                                                        </p>
+                                                        <Link href={`/ticket/${ticket.ticketId}`}>
+                                                            <Button size="sm" variant="outline" className="bg-transparent">
+                                                                View
+                                                            </Button>
+                                                        </Link>
                                                     </div>
-                                                    <Link href={`/ticket/${ticket.id}`}>
-                                                        <Button size="sm" variant="outline" className="bg-transparent">
-                                                            View
-                                                        </Button>
-                                                    </Link>
                                                 </div>
-                                            </div>
-                                        ))}
+                                            )
+                                        }
+                                        )}
                                     </div>
                                 ) : (
                                     <div className="text-center py-8">
@@ -380,7 +395,7 @@ export default function DashboardContent() {
                                             <li key={ticket.id} className="border-b pb-2 last:border-b-0">
                                                 <div className="font-medium text-sm">{ticket.title}</div>
                                                 <div className="text-xs text-gray-500 flex items-center justify-between mt-1">
-                                                    <span>Submitted on {new Date(ticket.submittedOn).toLocaleString("en-us",{year:"numeric",month:"short",day:"numeric",hour:"numeric",minute:"2-digit",hour12:true})}</span>
+                                                    <span>Submitted on {new Date(ticket.submittedOn).toLocaleString("en-us", { year: "numeric", month: "short", day: "numeric", hour: "numeric", minute: "2-digit", hour12: true })}</span>
                                                     {getStatusBadge(ticket.status)}
                                                 </div>
                                             </li>

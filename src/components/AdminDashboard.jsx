@@ -27,6 +27,7 @@ import {
   Building,
   Loader2,
   Clipboard,
+  Eye,
 } from "lucide-react";
 
 import Navbar from "./navbar"
@@ -35,6 +36,7 @@ import useAuthStore from "@/store/useAuthStore"
 import useAdminStore from "@/store/useAdminStore"
 import useTicketStore from "@/store/useTicketStore"
 import AssignedTicketsList from "@/components/AssignedTicketsList"
+import Link from "next/link"
 
 
 export default function AdminDashboard() {
@@ -98,10 +100,10 @@ export default function AdminDashboard() {
       facilities: "Facilities & Maintenance",
       billing: "Billing & Insurance",
     };
-  
+
     return departments[departmentValue] || "Unknown Department";
   };
-  
+
 
   const getStatusBadge = (status) => {
     const statusConfig = {
@@ -409,7 +411,9 @@ export default function AdminDashboard() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {filteredTickets.map((ticket) => (
+                  {filteredTickets.map((ticket) =>{
+                    const departmentInfo = getDepartmentInfo(ticket.department)
+                    return(
                     <div key={ticket.id} className="bg-gray-50 rounded-lg p-4 border border-gray-200">
                       <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
                         {/* Ticket Info */}
@@ -432,7 +436,7 @@ export default function AdminDashboard() {
                             </div>
                             <div className="flex items-center">
                               <Building className="w-4 h-4 mr-2 text-gray-400" />
-                              Department: {ticket.department}
+                              Department: {departmentInfo}
                             </div>
                             <div className="flex items-center">
                               <Calendar className="w-4 h-4 mr-2 text-gray-400" />
@@ -498,10 +502,21 @@ export default function AdminDashboard() {
                               </SelectContent>
                             </Select>
                           </div>
+
+                          {/* View Details Button */}
+                          <div className="flex flex-col space-y-2 min-w-32">
+                            <Link href={`/ticket/${ticket.ticketId}`}>
+                              <Button size="sm" className=" bg-blue-600 hover:bg-blue-700 text-white">
+                                <Eye className="w-4 h-4 mr-2" />
+                                View Details
+                              </Button>
+                            </Link>
+                          </div>
                         </div>
                       </div>
                     </div>
-                  ))}
+                    )
+                  })}
 
                   {filteredTickets.length === 0 && (
                     <div className="text-center py-8">

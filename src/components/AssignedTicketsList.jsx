@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -10,80 +10,47 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Search, Filter, Calendar, Building, AlertCircle, Clock, CheckCircle, User, Eye, Plus } from "lucide-react"
 import Navbar from "./navbar"
+import useTicketStore from "@/store/useTicketStore"
+import useAuthStore from "@/store/useAuthStore"
 
-const AssignedTicketsList = ({ user, showNavbar, showButton, fromAdmin = false }) => {
+const AssignedTicketsList = ({ showNavbar, showButton, fromAdmin = false }) => {
     const [searchTerm, setSearchTerm] = useState("")
     const [filterStatus, setFilterStatus] = useState("all")
     const [filterPriority, setFilterPriority] = useState("all")
+    const { assignedTickets, subscribeAssignedTickets, unsubscribeAssignedTickets } = useTicketStore()
+    const { user } = useAuthStore()
+    useEffect(() => {
+        if (user?.id) {
+            subscribeAssignedTickets(user.id);
+        }
 
-    // Sample assigned tickets data
-    const tickets = [
-        {
-            id: "TK-001",
-            title: "Computer won't start in Room 302",
-            status: "open",
-            priority: "high",
-            department: "Emergency Medicine",
-            submittedBy: "Dr. Sarah Johnson",
-            submittedByEmail: "sarah.johnson@hospital.com",
-            dateSubmitted: "2024-01-15",
-            lastUpdated: "2024-01-15",
-            description:
-                "Desktop computer in patient room 302 won't power on. Red light blinking on power button. This is affecting patient care as we cannot access the electronic health records system.",
-        },
-        {
-            id: "TK-003",
-            title: "Network connectivity issues in ICU",
-            status: "in-progress",
-            priority: "high",
-            department: "ICU",
-            submittedBy: "Jennifer Adams",
-            submittedByEmail: "jennifer.adams@hospital.com",
-            dateSubmitted: "2024-01-16",
-            lastUpdated: "2024-01-17",
-            description:
-                "Intermittent network connectivity affecting patient monitoring systems. Multiple devices losing connection every 10-15 minutes.",
-        },
-        {
-            id: "TK-005",
-            title: "Printer offline in Radiology",
-            status: "in-progress",
-            priority: "medium",
-            department: "Radiology",
-            submittedBy: "Dr. Mark Stevens",
-            submittedByEmail: "mark.stevens@hospital.com",
-            dateSubmitted: "2024-01-14",
-            lastUpdated: "2024-01-16",
-            description:
-                "Main printer showing offline status, unable to print patient reports. Backup printer is working but slower.",
-        },
-        {
-            id: "TK-007",
-            title: "Software license expired - Pharmacy system",
-            status: "open",
-            priority: "medium",
-            department: "Pharmacy",
-            submittedBy: "Lisa Park",
-            submittedByEmail: "lisa.park@hospital.com",
-            dateSubmitted: "2024-01-10",
-            lastUpdated: "2024-01-10",
-            description:
-                "Pharmacy management software showing license expiration warning. System will be unusable in 3 days.",
-        },
-        {
-            id: "TK-009",
-            title: "Email sync issues on mobile devices",
-            status: "open",
-            priority: "low",
-            department: "Cardiology",
-            submittedBy: "Dr. Emily Rodriguez",
-            submittedByEmail: "emily.rodriguez@hospital.com",
-            dateSubmitted: "2024-01-12",
-            lastUpdated: "2024-01-12",
-            description:
-                "Hospital email not syncing properly on iPhone and Android devices. Missing recent messages and calendar events.",
-        },
-    ]
+        return () => {
+            unsubscribeAssignedTickets();
+        };
+    }, [user?.id, subscribeAssignedTickets, unsubscribeAssignedTickets]);
+
+    const getDepartmentInfo = (departmentValue) => {
+        const departments = {
+            emergency: "Emergency Medicine",
+            radiology: "Radiology",
+            cardiology: "Cardiology",
+            neurology: "Neurology",
+            oncology: "Oncology",
+            orthopedics: "Orthopedics",
+            pediatrics: "Pediatrics",
+            pharmacy: "Pharmacy",
+            laboratory: "Laboratory",
+            surgery: "Surgery",
+            icu: "Intensive Care Unit (ICU)",
+            it: "Information Technology (IT)",
+            hr: "Human Resources (HR)",
+            administration: "Administration",
+            facilities: "Facilities & Maintenance",
+            billing: "Billing & Insurance",
+        };
+
+        return departments[departmentValue] || "Unknown Department";
+    };
 
     const getStatusBadge = (status) => {
         const statusConfig = {
@@ -114,10 +81,10 @@ const AssignedTicketsList = ({ user, showNavbar, showButton, fromAdmin = false }
     }
 
     // Filter tickets
-    const filteredTickets = tickets.filter((ticket) => {
+    const filteredTickets = assignedTickets.filter((ticket) => {
         const matchesSearch =
             ticket.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            ticket.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            ticket.ticketId.toLowerCase().includes(searchTerm.toLowerCase()) ||
             ticket.submittedBy.toLowerCase().includes(searchTerm.toLowerCase()) ||
             ticket.department.toLowerCase().includes(searchTerm.toLowerCase())
 
@@ -129,10 +96,10 @@ const AssignedTicketsList = ({ user, showNavbar, showButton, fromAdmin = false }
 
     // Statistics
     const stats = {
-        total: tickets.length,
-        open: tickets.filter((t) => t.status === "open").length,
-        inProgress: tickets.filter((t) => t.status === "in-progress").length,
-        high: tickets.filter((t) => t.priority === "high").length,
+        total: assignedTickets.length,
+        open: assignedTickets.filter((t) => t.status === "open").length,
+        inProgress: assignedTickets.filter((t) => t.status === "in-progress").length,
+        high: assignedTickets.filter((t) => t.priority === "high").length,
     }
 
     return (
@@ -282,59 +249,62 @@ const AssignedTicketsList = ({ user, showNavbar, showButton, fromAdmin = false }
                     </CardHeader>
                     <CardContent>
                         <div className="space-y-4">
-                            {filteredTickets.map((ticket) => (
-                                <div
-                                    key={ticket.id}
-                                    className="bg-gray-50 rounded-lg p-4 border border-gray-200 hover:shadow-md transition-shadow"
-                                >
-                                    <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
-                                        {/* Ticket Info */}
-                                        <div className="flex-1">
-                                            <div className="flex items-start justify-between mb-2">
-                                                <div>
-                                                    <h3 className="font-semibold text-gray-800 text-lg">{ticket.title}</h3>
-                                                    <p className="text-sm text-gray-600">#{ticket.id}</p>
+                            {filteredTickets.map((ticket) => {
+                                const departmentInfo = getDepartmentInfo(ticket.department)
+                                return (
+                                    <div
+                                        key={ticket.id}
+                                        className="bg-gray-50 rounded-lg p-4 border border-gray-200 hover:shadow-md transition-shadow"
+                                    >
+                                        <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+                                            {/* Ticket Info */}
+                                            <div className="flex-1">
+                                                <div className="flex items-start justify-between mb-2">
+                                                    <div>
+                                                        <h3 className="font-semibold text-gray-800 text-lg">{ticket.title}</h3>
+                                                        <p className="text-sm text-gray-600">#{ticket.ticketId}</p>
+                                                    </div>
+                                                    <div className="flex items-center space-x-2">
+                                                        {getStatusBadge(ticket.status)}
+                                                        {getPriorityBadge(ticket.priority)}
+                                                    </div>
                                                 </div>
-                                                <div className="flex items-center space-x-2">
-                                                    {getStatusBadge(ticket.status)}
-                                                    {getPriorityBadge(ticket.priority)}
+
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-gray-600 mb-3">
+                                                    <div className="flex items-center">
+                                                        <User className="w-4 h-4 mr-2 text-gray-400" />
+                                                        Submitted by: {ticket.submittedBy}
+                                                    </div>
+                                                    <div className="flex items-center">
+                                                        <Building className="w-4 h-4 mr-2 text-gray-400" />
+                                                        Department: {departmentInfo}
+                                                    </div>
+                                                    <div className="flex items-center">
+                                                        <Calendar className="w-4 h-4 mr-2 text-gray-400" />
+                                                        Submitted: {new Date(ticket.dateSubmitted).toLocaleDateString()}
+                                                    </div>
+                                                    <div className="flex items-center">
+                                                        <Clock className="w-4 h-4 mr-2 text-gray-400" />
+                                                        Updated: {new Date(ticket.lastUpdated).toLocaleDateString()}
+                                                    </div>
                                                 </div>
+
+                                                <p className="text-sm text-gray-700 mb-3 line-clamp-2">{ticket.description}</p>
                                             </div>
 
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-gray-600 mb-3">
-                                                <div className="flex items-center">
-                                                    <User className="w-4 h-4 mr-2 text-gray-400" />
-                                                    Submitted by: {ticket.submittedBy}
-                                                </div>
-                                                <div className="flex items-center">
-                                                    <Building className="w-4 h-4 mr-2 text-gray-400" />
-                                                    Department: {ticket.department}
-                                                </div>
-                                                <div className="flex items-center">
-                                                    <Calendar className="w-4 h-4 mr-2 text-gray-400" />
-                                                    Submitted: {new Date(ticket.dateSubmitted).toLocaleDateString()}
-                                                </div>
-                                                <div className="flex items-center">
-                                                    <Clock className="w-4 h-4 mr-2 text-gray-400" />
-                                                    Updated: {new Date(ticket.lastUpdated).toLocaleDateString()}
-                                                </div>
+                                            {/* Actions */}
+                                            <div className="flex flex-col space-y-2 min-w-32">
+                                                <Link href={`/ticket/${ticket.ticketId}`}>
+                                                    <Button size="sm" className="w-full bg-blue-600 hover:bg-blue-700 text-white">
+                                                        <Eye className="w-4 h-4 mr-2" />
+                                                        View Details
+                                                    </Button>
+                                                </Link>
                                             </div>
-
-                                            <p className="text-sm text-gray-700 mb-3 line-clamp-2">{ticket.description}</p>
-                                        </div>
-
-                                        {/* Actions */}
-                                        <div className="flex flex-col space-y-2 min-w-32">
-                                            <Link href={`/ticket/${ticket.id}`}>
-                                                <Button size="sm" className="w-full bg-blue-600 hover:bg-blue-700 text-white">
-                                                    <Eye className="w-4 h-4 mr-2" />
-                                                    View Details
-                                                </Button>
-                                            </Link>
                                         </div>
                                     </div>
-                                </div>
-                            ))}
+                                )
+                            })}
 
                             {filteredTickets.length === 0 && (
                                 <div className="text-center py-12">

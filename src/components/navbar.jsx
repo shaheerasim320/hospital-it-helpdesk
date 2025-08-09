@@ -4,13 +4,13 @@ import { useState } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Menu, X, Monitor, Home, FileText, Clipboard, Settings, LogOut } from "lucide-react"
-import useUserStore from "@/store/useUserStore"
+import useAuthStore from "@/store/useAuthStore"
 import { useRouter } from "next/navigation"
 
 export default function Navbar() {
   const router = useRouter()
   const [isOpen, setIsOpen] = useState(false)
-  const { user, logout } = useUserStore()
+  const { user, logout } = useAuthStore()
 
   const handleLogout = () => {
     logout()
@@ -20,7 +20,7 @@ export default function Navbar() {
   const userRole = user?.role || "Guest"
   const userName = user?.name || "Unknown"
 
-  const ticketLinkText = userRole == "IT".toLowerCase() ? "Tickets to Resolve" : "My Tickets";
+  const ticketLinkText = userRole == "IT Support" ? "Tickets to Resolve" : "My Tickets";
 
   return (
     <nav className="bg-white shadow-lg border-b border-gray-200">
@@ -45,7 +45,7 @@ export default function Navbar() {
               <Home className="w-4 h-4 mr-2" />
               Home
             </Link>
-            {userRole !== "IT".toLowerCase() && (
+            {userRole !== "IT Support" && (
               <Link
                 href="/submit-ticket"
                 className="flex items-center px-3 py-2 text-gray-700 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
@@ -55,7 +55,7 @@ export default function Navbar() {
               </Link>
             )}
             <Link
-              href={userRole == "IT".toLowerCase() ? "/my-assigned-tickets" : "/my-tickets"}
+              href={userRole == "IT Support" ? "/my-assigned-tickets" : "/my-tickets"}
               className="flex items-center px-3 py-2 text-gray-700 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
             >
               <Clipboard className="w-4 h-4 mr-2" />
@@ -98,7 +98,7 @@ export default function Navbar() {
                 <Home className="w-4 h-4 mr-3" />
                 Home
               </Link>
-              {userRole !== "IT".toLowerCase() && (
+              {userRole !== "IT Support" && (
                 <Link
                   href="/submit-ticket"
                   className="flex items-center px-3 py-2 text-gray-700 hover:text-blue-600 hover:bg-blue-50 rounded-md"
@@ -109,7 +109,7 @@ export default function Navbar() {
               )}
 
               <Link
-                href={userRole == "IT".toLowerCase() ? "/my-assigned-tickets" : "/my-tickets"}
+                href={userRole == "IT Support" ? "/my-assigned-tickets" : "/my-tickets"}
                 className="flex items-center px-3 py-2 text-gray-700 hover:text-blue-600 hover:bg-blue-50 rounded-md"
               >
                 <Clipboard className="w-4 h-4 mr-3" />

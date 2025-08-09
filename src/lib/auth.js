@@ -3,10 +3,10 @@ import { cookies } from 'next/headers';
 
 const SECRET_KEY = new TextEncoder().encode(process.env.JWT_SECRET_KEY);
 
-export async function getUserFromToken() {
+export async function verifyToken() {
   try {
     const cookieStore = await cookies();
-    const token = cookieStore.get('session-token')?.value;
+    const token = cookieStore.get('session')?.value;
 
     if (!token) return null;
 

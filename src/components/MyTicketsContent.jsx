@@ -7,7 +7,7 @@ import { Plus, Calendar, Building, AlertCircle, Clock, CheckCircle, Loader2 } fr
 import Navbar from "./navbar"
 import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
-import useUserStore from "@/store/useUserStore"
+import useAuthStore from "@/store/useAuthStore"
 import { collection, getDocs, query, where } from "firebase/firestore"
 import { db } from "../app/lib/firebase"
 
@@ -15,7 +15,7 @@ export default function MyTicketsContent() {
   const router = useRouter();
   const [tickets, setTickets] = useState([])
   const [loading, setLoading] = useState(true);
-  const { user } = useUserStore()
+  const { user } = useAuthStore()
 
   useEffect(() => {
     async function fetchTickets() {

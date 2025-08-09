@@ -17,6 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 export default function HospitalSignup() {
   const [fullName, setFullName] = useState("")
   const [department, setDepartment] = useState("")
+  const [role,setRole] = useState("")
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
@@ -68,7 +69,7 @@ export default function HospitalSignup() {
         email: user.email,
         name: fullName,
         department,
-        role: "staff",
+        role: role,
         status: "pending",
         createdAt: serverTimestamp(),
         lastUpdated: serverTimestamp(),
@@ -193,7 +194,24 @@ export default function HospitalSignup() {
                   </Select>
                 </div>
 
-
+                {/* Role */}
+                <div className="space-y-2 w-full">
+                  <Label htmlFor="department">Role</Label>
+                  <Select
+                    value={role}
+                    onValueChange={(value) => setRole(value)}
+                  >
+                    <SelectTrigger className="h-11 w-full">
+                      <SelectValue placeholder="Select role" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="doctor">Doctor</SelectItem>
+                      <SelectItem value="nurse">Nurse</SelectItem>
+                      <SelectItem value="it">IT Support</SelectItem>
+                      <SelectItem value="staff">Staff</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
 
                 {/* Email */}
                 <div className="space-y-2">

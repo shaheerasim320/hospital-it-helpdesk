@@ -18,11 +18,11 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { Stethoscope, Monitor, Shield, Headphones } from "lucide-react"
-import useUserStore from "@/store/useUserStore"
+import useAuthStore from "@/store/useAuthStore"
 import { doc, getDoc, serverTimestamp, updateDoc } from "firebase/firestore"
 
 export default function LoginPage() {
-  const setUser = useUserStore((state) => state.setUser)
+  const setUser = useAuthStore((state) => state.setUser)
   const router = useRouter()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
@@ -62,27 +62,29 @@ export default function LoginPage() {
         lastLogin: serverTimestamp(),
       });
 
-      setUser({
-        uid: userData.uid,
-        name: userData.name,
-        email: userData.email,
-        role: userData.role,
-        status: userData.status,
-        department: userData.department,
-      });
-
       const response = await fetch("/api/login", {
         method: "POST",
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ uid: userData.uid, role: userData.role }),
-      })
+      });
 
       if (!response.ok) {
-        toast.error("Something went wrong. Please try again!")
-        setEmail("")
-        setPassword("")
-        return
+        toast.error("Something went wrong. Please try again!");
+        setEmail("");
+        setPassword("");
+        return;
       }
+      const role = userData.role === "it" ? "IT Support" : userData.role.charAt(0).toUpperCase() + userData.role.slice(1)
+
+      setUser({
+        uid: userData.uid,
+        name: userData.name.split(" ").map(word=>word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(" "),
+        email: userData.email,
+        role: role,
+        status: userData.status,
+        department: userData.department,
+      });
+
 
       toast.success("Login successful!");
 

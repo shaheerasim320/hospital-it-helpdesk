@@ -1,9 +1,9 @@
 import AssignedTicketsList from "@/components/AssignedTicketsList"
 import ProtectedRoute from "@/components/ProtectedRoute"
-import { getUserFromToken } from "@/lib/auth"
+import { verifyToken } from "@/lib/auth"
 
 export default async function MyAssignedTickets() {
-    const user = await getUserFromToken();
+    const user = await verifyToken();
 
     return (
         <ProtectedRoute>

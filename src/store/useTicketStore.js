@@ -6,13 +6,19 @@ import {
   doc,
   updateDoc,
   serverTimestamp,
+  query,
+  where,
+  orderBy,
+  limit,
 } from "firebase/firestore";
 import { db } from "@/app/lib/firebase";
+import { uploadFilesToCloudinary } from "@/app/utils/uploadFilesToCloudinary";
 
 const useTicketStore = create((set, get) => ({
   tickets: [],
   loading: false,
   error: null,
+  recentTickets: [],
 
   fetchTickets: async () => {
     set({ loading: true, error: null });
@@ -37,17 +43,17 @@ const useTicketStore = create((set, get) => ({
         const year = new Date().getFullYear();
         return `TCK-${year}-${String(count).padStart(4, "0")}`;
       };
-
+  
       const readableTicketId = await generateReadableTicketId();
-
-      const initialTicket = {
+  
+      const newTicket = {
         ...ticketData,
         ticketId: readableTicketId,
         status: "open",
         attachments: [],
         assignedTo: null,
-        dateSubmitted: new Date().toISOString().split("T")[0],
-        lastUpdated: new Date().toISOString().split("T")[0],
+        dateSubmitted: new Date().toISOString(),
+        lastUpdated: new Date().toISOString(),
         comments: [
           {
             id: 1,
@@ -59,31 +65,25 @@ const useTicketStore = create((set, get) => ({
           },
         ],
       };
-
-      const docRef = await addDoc(collection(db, "tickets"), initialTicket);
-
+  
+      const docRef = await addDoc(collection(db, "tickets"), newTicket);
+  
       let attachmentURLs = [];
-      if (attachments.length > 0) {
-        attachmentURLs = await uploadFilesToStorage(attachments, docRef.id);
+      if (attachments && attachments.length > 0) {
+        attachmentURLs = await uploadFilesToCloudinary(attachments);
+        await updateDoc(doc(db, "tickets", docRef.id), {
+          attachments: attachmentURLs,
+          lastUpdated: new Date().toISOString(),
+        });
       }
-
-      await updateDoc(doc(db, "tickets", docRef.id), {
-        id: docRef.id,
-        attachments: attachmentURLs,
-      });
-
+  
       set((state) => ({
         tickets: [
-          {
-            id: docRef.id,
-            ...initialTicket,
-            attachments: attachmentURLs,
-            createdAt: new Date(),
-          },
+          { id: docRef.id, ...newTicket, attachments: attachmentURLs },
           ...state.tickets,
         ],
       }));
-
+  
       await fetch("/api/send-ticket-email", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -94,10 +94,13 @@ const useTicketStore = create((set, get) => ({
           ticketId: readableTicketId,
         }),
       });
+  
+      await get().fetchRecentTickets(ticketData.submittedByEmail);
+  
     } catch (err) {
       console.error("Error creating ticket:", err);
     }
-  },
+  },  
 
 
 
@@ -145,7 +148,6 @@ const useTicketStore = create((set, get) => ({
       const state = get();
       const ticketRef = doc(db, "tickets", ticketId);
       const targetTicket = state.tickets.find((t) => t.id === ticketId);
-      console.log(targetTicket)
       const updatedComments = [
         ...(targetTicket.comments || []),
         {
@@ -170,6 +172,32 @@ const useTicketStore = create((set, get) => ({
       console.error("Error adding comment:", err);
     }
   },
+  fetchRecentTickets: async (email) => {
+    set({ loading: true, error: null });
+    try {
+      const q = query(
+        collection(db, "tickets"),
+        where("submittedByEmail", "==", email),
+        orderBy("dateSubmitted", "desc"),
+        limit(3)
+      );
+
+      const snapshot = await getDocs(q);
+      const ticketsData = snapshot.docs.map((doc) => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          title: data.title,
+          submittedOn: data.dateSubmitted,
+          status: data.status
+        };
+      });
+      set({ recentTickets: ticketsData, loading: false });
+    } catch (err) {
+      console.error("Error fetching recent tickets:", err);
+      set({ error: "Failed to fetch recent tickets", loading: false });
+    }
+  }
 }));
 
 export default useTicketStore;

@@ -19,7 +19,7 @@ export async function POST(request) {
       .sign(SECRET_KEY);
 
     const cookieStore = await cookies();
-    cookieStore.set('session-token', token, {
+    cookieStore.set('session', token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       maxAge: 60 * 60 * 2,

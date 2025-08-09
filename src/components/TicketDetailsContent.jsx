@@ -28,17 +28,17 @@ import {
   Loader2,
 } from "lucide-react"
 import Navbar from "./navbar"
-import useUserStore from "@/store/useUserStore"
 import { collection, getDoc, getDocs, query, where } from "firebase/firestore"
 import { db } from "@/app/lib/firebase"
 import useAdminStore from "@/store/useAdminStore"
 import useTicketStore from "@/store/useTicketStore"
+import useAuthStore from "@/store/useAuthStore"
 
 export default function TicketDetailsContent() {
   const router = useRouter()
   const params = useParams()
   const ticketId = params.id
-  const { user } = useUserStore()
+  const { user } = useAuthStore()
   const { staff, fetchStaff } = useAdminStore()
   const [loading, setLoading] = useState(true)
   const [ticket, setTicket] = useState();
@@ -159,15 +159,18 @@ export default function TicketDetailsContent() {
     setIsSubmittingComment(true)
 
     const comment = {
+      id: Date.now(),
       author: user.name,
       authorEmail: user.email,
       authorRole: user.role.toLowerCase(),
       content: newComment.trim(),
       type: "comment",
+      timestamp: new Date().toISOString(),
     };
 
     try {
       await addComment(ticket.id, comment)
+      setComments(prev => [...prev, comment])
       setNewComment("")
       showToast("success", "Comment added successfully.")
     } catch (error) {
@@ -176,6 +179,7 @@ export default function TicketDetailsContent() {
       setIsSubmittingComment(false)
     }
   }
+
 
   const formatTimestamp = (timestamp) => {
     return new Date(timestamp).toLocaleString()
@@ -301,22 +305,25 @@ export default function TicketDetailsContent() {
                       Attachments
                     </h3>
                     <div className="space-y-2">
-                      {ticket?.attachments.map((attachment) => (
-                        <div
-                          key={attachment.id}
-                          className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200"
-                        >
-                          <span className="text-sm text-gray-700">{attachment.filename}</span>
-                          <a
-                            href={attachment.url}
-                            download
-                            className="text-blue-600 hover:text-blue-800 transition-colors"
-                            title="Download attachment"
+                      {(ticket?.attachments || []).map((url, index) => {
+                        const filename = url.split("/").pop(); // extract filename from URL
+                        return (
+                          <div
+                            key={index}
+                            className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200"
                           >
-                            <Download className="w-4 h-4" />
-                          </a>
-                        </div>
-                      ))}
+                            <span className="text-sm text-gray-700">{filename}</span>
+                            <a
+                              href={url}
+                              download
+                              className="text-blue-600 hover:text-blue-800 transition-colors"
+                              title="Download attachment"
+                            >
+                              <Download className="w-4 h-4" />
+                            </a>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 )}

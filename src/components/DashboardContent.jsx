@@ -8,34 +8,36 @@ import { FileText, Clipboard, Monitor, Stethoscope, Shield, Users, AlertCircle, 
 import Navbar from "./navbar"
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import useUserStore from "@/store/useUserStore"
+import useAuthStore from "@/store/useAuthStore"
 import useTicketStore from "@/store/useTicketStore"
 
 export default function DashboardContent() {
-    const { user } = useUserStore();
-    const { tickets } = useTicketStore();
-    const [recentTickets, setRecentTickets] = useState([])
+    const { user } = useAuthStore();
+    const { fetchRecentTickets, recentTickets } = useTicketStore();
     const [assignedTickets, setAssignedTickets] = useState([])
     const [ticketStats, setTicketStats] = useState({ open: 0, inProgress: 0, resolved: 0 })
     const router = useRouter()
 
     useEffect(() => {
-        if (user?.role === "admin") {
-            router.push("/admin")
-            return
-        }
+        if (user) {
+            if (user?.role === "admin") {
+                router.push("/admin")
+                return
+            }
 
-        if (user?.role === "it") {
-            fetchAssignedTickets(user?.email)
-            fetchTicketStats()
-        } else {
-            fetchRecentTickets(user?.email)
+            if (user?.role === "IT Support") {
+                fetchAssignedTickets(user?.email)
+                fetchTicketStats()
+            } else {
+                fetchRecentTickets(user?.email)
+            }
         }
-    }, [router, user])
+    }, [user])
+
 
     // Different quick actions based on role
     const getQuickActions = (role) => {
-        if (role === "it") {
+        if (role === "IT Support") {
             return [
                 {
                     title: "My Assigned Tickets",
@@ -84,19 +86,19 @@ export default function DashboardContent() {
         }
     }
 
-    const fetchRecentTickets = async (email) => {
-        try {
-            // Mock data for user's own tickets
-            const mockData = [
-                { id: 1, subject: "Printer not working", date: "2025-08-02", status: "open" },
-                { id: 2, subject: "Email sync issue", date: "2025-08-01", status: "in-progress" },
-                { id: 3, subject: "Software license expired", date: "2025-07-30", status: "resolved" },
-            ]
-            setRecentTickets(mockData)
-        } catch (err) {
-            console.error("Failed to fetch tickets:", err)
-        }
-    }
+    // const fetchRecentTickets = async (email) => {
+    //     try {
+    //         // Mock data for user's own tickets
+    //         const mockData = [
+    //             { id: 1, subject: "Printer not working", date: "2025-08-02", status: "open" },
+    //             { id: 2, subject: "Email sync issue", date: "2025-08-01", status: "in-progress" },
+    //             { id: 3, subject: "Software license expired", date: "2025-07-30", status: "resolved" },
+    //         ]
+    //         setRecentTickets(mockData)
+    //     } catch (err) {
+    //         console.error("Failed to fetch tickets:", err)
+    //     }
+    // }
 
     const fetchAssignedTickets = async (email) => {
         try {
@@ -177,15 +179,15 @@ export default function DashboardContent() {
                             <div>
                                 <h1 className="text-3xl font-bold text-gray-800 mb-2">Welcome back, {userName}</h1>
                                 <p className="text-gray-600 mb-4">
-                                    {userRole === "it" ? "IT Support Dashboard - Hospital Help Desk" : "Hospital IT Help Desk Dashboard"}
+                                    {userRole === "IT Support" ? "IT Support Dashboard - Hospital Help Desk" : "Hospital IT Help Desk Dashboard"}
                                 </p>
                                 <div className="flex items-center space-x-2">
                                     <span
-                                        className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${userRole === "it" ? "bg-blue-100 text-blue-800" : "bg-green-100 text-green-800"
+                                        className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${userRole === "IT Support" ? "bg-blue-100 text-blue-800" : "bg-green-100 text-green-800"
                                             }`}
                                     >
                                         <Users className="w-4 h-4 mr-1" />
-                                        {userRole === "it" ? "IT Support" : userRole.charAt(0).toUpperCase() + userRole.slice(1)}
+                                        {userRole === "IT Support" ? "IT Support" : userRole.charAt(0).toUpperCase() + userRole.slice(1)}
                                     </span>
                                 </div>
                             </div>
@@ -238,7 +240,7 @@ export default function DashboardContent() {
                                         <CardDescription className="text-gray-600 mb-4">{action.description}</CardDescription>
                                         <Link href={action.href}>
                                             <Button className={`w-full ${action.color} ${action.hoverColor} text-white`}>
-                                                {userRole === "it" ? "Manage" : "Get Started"}
+                                                {userRole === "IT Support" ? "Manage" : "Get Started"}
                                             </Button>
                                         </Link>
                                     </CardContent>
@@ -249,7 +251,7 @@ export default function DashboardContent() {
                 </div>
 
                 {/* Role-specific content */}
-                {userRole === "it" ? (
+                {userRole === "IT Support" ? (
                     // IT Dashboard
                     <div className="space-y-6">
                         {/* Ticket Stats */}
@@ -376,9 +378,9 @@ export default function DashboardContent() {
                                     <ul className="space-y-3">
                                         {recentTickets.map((ticket) => (
                                             <li key={ticket.id} className="border-b pb-2 last:border-b-0">
-                                                <div className="font-medium text-sm">{ticket.subject}</div>
+                                                <div className="font-medium text-sm">{ticket.title}</div>
                                                 <div className="text-xs text-gray-500 flex items-center justify-between mt-1">
-                                                    <span>Submitted on {ticket.date}</span>
+                                                    <span>Submitted on {new Date(ticket.submittedOn).toLocaleString("en-us",{year:"numeric",month:"short",day:"numeric",hour:"numeric",minute:"2-digit",hour12:true})}</span>
                                                     {getStatusBadge(ticket.status)}
                                                 </div>
                                             </li>

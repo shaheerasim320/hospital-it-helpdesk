@@ -31,7 +31,7 @@ import {
 
 import Navbar from "./navbar"
 import { useRouter } from "next/navigation"
-import useUserStore from "@/store/useUserStore"
+import useAuthStore from "@/store/useAuthStore"
 import useAdminStore from "@/store/useAdminStore"
 import useTicketStore from "@/store/useTicketStore"
 import AssignedTicketsList from "@/components/AssignedTicketsList"
@@ -39,7 +39,7 @@ import AssignedTicketsList from "@/components/AssignedTicketsList"
 
 export default function AdminDashboard() {
   const router = useRouter()
-  const { user } = useUserStore()
+  const { user } = useAuthStore()
   const { staff, fetchStaff, loading, updateRole } = useAdminStore()
   const { tickets, fetchTickets, loading: ticketLoading, error, assignTicket, updateTicketStatus } = useTicketStore();
   const [searchTerm, setSearchTerm] = useState("")
@@ -54,8 +54,8 @@ export default function AdminDashboard() {
 
 
   useEffect(() => {
-      fetchTickets();
-      fetchStaff();
+    fetchTickets();
+    fetchStaff();
   }, []);
 
 
@@ -78,6 +78,30 @@ export default function AdminDashboard() {
   const getRoleInfo = (roleValue) => {
     return roles.find((role) => role.value === roleValue) || roles[4]
   }
+
+  const getDepartmentInfo = (departmentValue) => {
+    const departments = {
+      emergency: "Emergency Medicine",
+      radiology: "Radiology",
+      cardiology: "Cardiology",
+      neurology: "Neurology",
+      oncology: "Oncology",
+      orthopedics: "Orthopedics",
+      pediatrics: "Pediatrics",
+      pharmacy: "Pharmacy",
+      laboratory: "Laboratory",
+      surgery: "Surgery",
+      icu: "Intensive Care Unit (ICU)",
+      it: "Information Technology (IT)",
+      hr: "Human Resources (HR)",
+      administration: "Administration",
+      facilities: "Facilities & Maintenance",
+      billing: "Billing & Insurance",
+    };
+  
+    return departments[departmentValue] || "Unknown Department";
+  };
+  
 
   const getStatusBadge = (status) => {
     const statusConfig = {
@@ -593,6 +617,7 @@ export default function AdminDashboard() {
                   {filteredUsers.map((user) => {
                     const roleInfo = getRoleInfo(user.role)
                     const isEditing = editingUser === user.id
+                    const departmentInfo = getDepartmentInfo(user.department)
 
                     return (
                       <div key={user.id} className="bg-gray-50 rounded-lg p-4 border border-gray-200">
@@ -603,7 +628,7 @@ export default function AdminDashboard() {
                               <div>
                                 <h3 className="font-semibold text-gray-800">{user.name}</h3>
                                 <p className="text-sm text-gray-600">{user.email}</p>
-                                <p className="text-sm text-gray-500">{user.department}</p>
+                                <p className="text-sm text-gray-500">{departmentInfo}</p>
                               </div>
                               <div className="flex items-center space-x-2">
                                 {user.status === "approved" ? (

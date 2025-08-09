@@ -11,7 +11,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Monitor, Stethoscope, Shield, Headphones, CheckCircle, AlertCircle } from "lucide-react"
 import Navbar from "./navbar"
 import useTicketStore from "@/store/useTicketStore"
-import useUserStore from "@/store/useUserStore"
+import useAuthStore from "@/store/useAuthStore"
 
 export default function SubmitTicketContent() {
 
@@ -26,7 +26,7 @@ export default function SubmitTicketContent() {
     const [isSubmitting, setIsSubmitting] = useState(false)
 
     const { createTicket } = useTicketStore();
-    const { user } = useUserStore();
+    const { user } = useAuthStore();
 
 
 

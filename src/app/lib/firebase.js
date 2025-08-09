@@ -8,7 +8,7 @@ const firebaseConfig = {
   apiKey: "AIzaSyCVEQgayzqTuRQmYEG7mEQ9D-1pngaJdcI",
   authDomain: "hospital-it-help-desk.firebaseapp.com",
   projectId: "hospital-it-help-desk",
-  storageBucket: "hospital-it-help-desk.firebasestorage.app",
+  storageBucket: "hospital-it-help-desk.appspot.com",
   messagingSenderId: "520614879541",
   appId: "1:520614879541:web:901e7609a938f7b799ec7c",
   measurementId: "G-279JQVS0PL"

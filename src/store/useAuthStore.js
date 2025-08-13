@@ -1,5 +1,5 @@
-import { create } from 'zustand';
-import { getAuth, signOut } from 'firebase/auth';
+import { create } from "zustand";
+import { getAuth, signOut } from "firebase/auth";
 
 const useAuthStore = create((set) => ({
   user: null,
@@ -15,25 +15,29 @@ const useAuthStore = create((set) => ({
       const auth = getAuth();
       await signOut(auth);
 
-      await fetch('/api/logout', { method: 'POST' });
+      await fetch("/api/auth/logout", { method: "POST" });
 
       set({ user: null, loading: false, error: null });
     } catch (error) {
-      console.error('Logout failed:', error);
-      set({ loading: false, error: 'Failed to log out' });
+      console.error("Logout failed:", error);
+      set({ loading: false, error: "Failed to log out" });
     }
   },
 
   fetchUser: async () => {
     try {
-      const res = await fetch("/api/me");
+      set({ loading: true, error: null });
+
+      const res = await fetch("/api/auth/me", { credentials: "include" });
       if (!res.ok) throw new Error("Unauthorized");
 
       const data = await res.json();
-      set({ user: data, loading: false, error: null });
+      set({ user: data.user, loading: false, error: null });
+      return data.user;
     } catch (err) {
       console.error("Failed to fetch user:", err);
       set({ user: null, loading: false, error: null });
+      return null;
     }
   },
 }));

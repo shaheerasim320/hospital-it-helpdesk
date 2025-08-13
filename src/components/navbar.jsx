@@ -16,7 +16,6 @@ export default function Navbar() {
     logout()
     router.replace("/login")
   }
-
   const userRole = user?.role || "Guest"
   const userName = user?.name || "Unknown"
 

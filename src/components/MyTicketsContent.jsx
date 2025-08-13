@@ -5,49 +5,35 @@ import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Plus, Calendar, Building, AlertCircle, Clock, CheckCircle, Loader2 } from "lucide-react"
 import Navbar from "./navbar"
-import { useRouter } from "next/navigation"
-import { useEffect, useState } from "react"
-import useAuthStore from "@/store/useAuthStore"
-import { collection, getDocs, query, where } from "firebase/firestore"
-import { db } from "../app/lib/firebase"
+import useTicketStore from "@/store/useTicketStore"
 
 export default function MyTicketsContent() {
-  const router = useRouter();
-  const [tickets, setTickets] = useState([])
-  const [loading, setLoading] = useState(true);
-  const { user } = useAuthStore()
+  const { myTickets } = useTicketStore()
 
-  useEffect(() => {
-    async function fetchTickets() {
-      try {
-        const q = query(
-          collection(db, "tickets"),
-          where("submittedByEmail", "==", user?.email)
-        );
-        const snapshot = await getDocs(q);
-        const userTickets = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
-        setTickets(userTickets);
-      } catch (error) {
-        console.error("Error fetching tickets:", error);
-      } finally {
-        setLoading(false);
-      }
-    }
+  const getDepartmentInfo = (departmentValue) => {
+    const departments = {
+      emergency: "Emergency Medicine",
+      radiology: "Radiology",
+      cardiology: "Cardiology",
+      neurology: "Neurology",
+      nursing:"Nursing",
+      oncology: "Oncology",
+      orthopedics: "Orthopedics",
+      pediatrics: "Pediatrics",
+      pharmacy: "Pharmacy",
+      laboratory: "Laboratory",
+      surgery: "Surgery",
+      icu: "Intensive Care Unit (ICU)",
+      it: "Information Technology (IT)",
+      hr: "Human Resources (HR)",
+      administration: "Administration",
+      facilities: "Facilities & Maintenance",
+      billing: "Billing & Insurance",
+    };
 
-    fetchTickets();
-  }, [user, router]);
+    return departments[departmentValue] || "Unknown Department";
+  };
 
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
-      </div>
-    );
-  }
 
   const getStatusBadge = (status) => {
     const statusConfig = {
@@ -98,7 +84,7 @@ export default function MyTicketsContent() {
 
         {/* Tickets Grid */}
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {tickets.map((ticket) => (
+          {myTickets.map((ticket) => (
             <Card key={ticket.id} className="shadow-lg border-0 hover:shadow-xl transition-shadow">
               <CardHeader className="pb-4">
                 <div className="flex items-start justify-between">
@@ -120,7 +106,7 @@ export default function MyTicketsContent() {
                 <div className="space-y-3">
                   <div className="flex items-center text-sm text-gray-600">
                     <Building className="w-4 h-4 mr-2 text-gray-400" />
-                    {ticket.department}
+                    {getDepartmentInfo(ticket.department)}
                   </div>
 
                   <div className="flex items-center text-sm text-gray-600">
@@ -150,7 +136,7 @@ export default function MyTicketsContent() {
         </div>
 
         {/* Empty state */}
-        {tickets.length === 0 && (
+        {myTickets.length === 0 && (
           <div className="text-center py-12">
             <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
               <AlertCircle className="w-12 h-12 text-gray-400" />

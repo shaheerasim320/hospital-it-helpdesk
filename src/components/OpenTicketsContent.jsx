@@ -24,21 +24,24 @@ import {
 } from "lucide-react"
 import Navbar from "./navbar"
 import useTicketStore from "@/store/useTicketStore"
+import useAuthStore from "@/store/useAuthStore"
 
 export default function OpenTicketsContent() {
   const [searchTerm, setSearchTerm] = useState("")
   const [filterPriority, setFilterPriority] = useState("all")
   const [filterDepartment, setFilterDepartment] = useState("all")
+  const [assigningTicketId, setAssigningTicketId] = useState(null)
   const [message, setMessage] = useState(null)
-  const { openTickets, subscribeOpenTickets, unsubscribeOpenTickets} = useTicketStore();
+  const { openTickets, subscribeOpenTickets, unsubscribeOpenTickets, assignTicket } = useTicketStore();
+  const { user } = useAuthStore()
 
   useEffect(() => {
-  subscribeOpenTickets();
+    subscribeOpenTickets();
 
-  return () => {
-    unsubscribeOpenTickets();
-  };
-}, [subscribeOpenTickets, unsubscribeOpenTickets]);
+    return () => {
+      unsubscribeOpenTickets();
+    };
+  }, [subscribeOpenTickets, unsubscribeOpenTickets]);
 
   // Sample unassigned tickets data
   const tickets = [
@@ -116,8 +119,18 @@ export default function OpenTicketsContent() {
     setTimeout(() => setMessage(null), 3000)
   }
 
-  const handleAssignToMe = (ticketId) => {
-    showToast("success", `Ticket ${ticketId} has been assigned to you.`)
+  const handleAssignToMe = async (ticketId) => {
+    const ticket = tickets.find((t) => t.id === ticketId)
+    try {
+      setAssigningTicketId(ticketId);
+      await assignTicket(ticketId, user.id);
+      showToast("success", `Ticket ${ticket.tickedId} has been assigned to you.`)
+    } catch (error) {
+      console.error("Error assigning ticket:", error);
+      showToast("error", "Failed to assign the ticket.");
+    } finally {
+      setAssigningTicketId(null);
+    }
   }
 
   const getPriorityBadge = (priority) => {
@@ -130,15 +143,10 @@ export default function OpenTicketsContent() {
     return <Badge className={`${priorityColors[priority]} capitalize px-2 py-1`}>{priority}</Badge>
   }
 
-  const getUrgencyColor = (urgency) => {
-    if (urgency.includes("Critical")) return "text-red-600 font-medium"
-    if (urgency.includes("Moderate")) return "text-orange-600 font-medium"
-    return "text-blue-600"
-  }
+
 
   const departments = [...new Set(openTickets.map((ticket) => ticket.department))]
 
-  // Filter tickets
   const filteredTickets = openTickets.filter((ticket) => {
     const matchesSearch =
       ticket.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -152,6 +160,30 @@ export default function OpenTicketsContent() {
     return matchesSearch && matchesPriority && matchesDepartment
   })
 
+  const getDepartmentInfo = (departmentValue) => {
+    const departments = {
+      emergency: "Emergency Medicine",
+      radiology: "Radiology",
+      cardiology: "Cardiology",
+      neurology: "Neurology",
+      nursing: "Nursing",
+      oncology: "Oncology",
+      orthopedics: "Orthopedics",
+      pediatrics: "Pediatrics",
+      pharmacy: "Pharmacy",
+      laboratory: "Laboratory",
+      surgery: "Surgery",
+      icu: "Intensive Care Unit (ICU)",
+      it: "Information Technology (IT)",
+      hr: "Human Resources (HR)",
+      administration: "Administration",
+      facilities: "Facilities & Maintenance",
+      billing: "Billing & Insurance",
+    };
+
+    return departments[departmentValue] || "Unknown Department";
+  };
+
   const stats = {
     total: openTickets.length,
     high: openTickets.filter((t) => t.priority === "high").length,
@@ -161,7 +193,7 @@ export default function OpenTicketsContent() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-green-50">
-      <Navbar userRole="IT" />
+      <Navbar />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
@@ -170,12 +202,6 @@ export default function OpenTicketsContent() {
             <h1 className="text-3xl font-bold text-gray-800 mb-2">Open Tickets</h1>
             <p className="text-gray-600">Unassigned tickets waiting for IT support</p>
           </div>
-          <Link href="/submit-ticket">
-            <Button className="mt-4 sm:mt-0 bg-blue-600 hover:bg-blue-700 text-white">
-              <Plus className="w-4 h-4 mr-2" />
-              Create New Ticket
-            </Button>
-          </Link>
         </div>
 
         {/* Message Alert */}
@@ -330,7 +356,7 @@ export default function OpenTicketsContent() {
                       <div className="flex items-start justify-between mb-2">
                         <div>
                           <h3 className="font-semibold text-gray-800 text-lg">{ticket.title}</h3>
-                          <p className="text-sm text-gray-600">#{ticket.id}</p>
+                          <p className="text-sm text-gray-600">#{ticket.ticketId}</p>
                         </div>
                         <div className="flex items-center space-x-2">{getPriorityBadge(ticket.priority)}</div>
                       </div>
@@ -342,15 +368,15 @@ export default function OpenTicketsContent() {
                         </div>
                         <div className="flex items-center">
                           <Building className="w-4 h-4 mr-2 text-gray-400" />
-                          Department: {ticket.department}
+                          Department: {getDepartmentInfo(ticket.department)}
                         </div>
                         <div className="flex items-center">
                           <Calendar className="w-4 h-4 mr-2 text-gray-400" />
                           Submitted: {new Date(ticket.dateSubmitted).toLocaleDateString()}
                         </div>
                         <div className="flex items-center">
-                          <AlertCircle className="w-4 h-4 mr-2 text-gray-400" />
-                          <span className={getUrgencyColor(ticket.urgency)}>{ticket.urgency}</span>
+                          <Calendar className="w-4 h-4 mr-2 text-gray-400" />
+                          Updated: {new Date(ticket.lastUpdated).toLocaleDateString()}
                         </div>
                       </div>
 
@@ -364,10 +390,19 @@ export default function OpenTicketsContent() {
                         onClick={() => handleAssignToMe(ticket.id)}
                         className="w-full bg-green-600 hover:bg-green-700 text-white"
                       >
-                        <UserPlus className="w-4 h-4 mr-2" />
-                        Assign to Me
+                        {assigningTicketId === ticket.id ? (
+                          <>
+                            <span className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full mr-2"></span>
+                            Assigning...
+                          </>
+                        ) : (
+                          <>
+                            <UserPlus className="w-4 h-4 mr-2" />
+                            Assign to Me
+                          </>
+                        )}
                       </Button>
-                      <Link href={`/ticket/${ticket.id}`}>
+                      <Link href={`/ticket/${ticket.ticketId}`}>
                         <Button size="sm" variant="outline" className="w-full bg-transparent">
                           <Eye className="w-4 h-4 mr-2" />
                           View Details

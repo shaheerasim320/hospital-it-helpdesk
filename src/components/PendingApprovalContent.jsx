@@ -20,7 +20,7 @@ import {
 } from "lucide-react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { collection, getDocs, query, where } from "firebase/firestore"
-import { db } from "../app/lib/firebase"
+import { db } from "@/lib/firebase"
 
 export default function PendingApprovalContent() {
     const [timeElapsed, setTimeElapsed] = useState("0 minutes")

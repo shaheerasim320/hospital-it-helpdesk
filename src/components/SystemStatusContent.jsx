@@ -25,112 +25,64 @@ import {
   MemoryStick,
 } from "lucide-react"
 import Navbar from "./navbar"
+import useSystemStatusStore from "@/store/useSystemStatusStore"
 
 export default function SystemStatusContent() {
   const [lastUpdated, setLastUpdated] = useState(new Date())
   const [isRefreshing, setIsRefreshing] = useState(false)
+  const { systems, stats, recentAlerts } = useSystemStatusStore()
 
-  // System status data
-  const [systemStatus, setSystemStatus] = useState({
-    overall: "operational", // operational, degraded, outage
-    services: [
-      {
-        name: "Network Infrastructure",
-        status: "operational",
-        uptime: "99.9%",
-        responseTime: "12ms",
-        icon: Wifi,
-        description: "Hospital-wide network connectivity",
-        lastIncident: "None in 30 days",
-      },
-      {
-        name: "Email System",
-        status: "operational",
-        uptime: "99.8%",
-        responseTime: "45ms",
-        icon: Mail,
-        description: "Email servers and communication",
-        lastIncident: "Minor delay 2 days ago",
-      },
-      {
-        name: "Database Servers",
-        status: "operational",
-        uptime: "99.95%",
-        responseTime: "8ms",
-        icon: Database,
-        description: "Patient records and hospital data",
-        lastIncident: "None in 45 days",
-      },
-      {
-        name: "Phone System",
-        status: "degraded",
-        uptime: "98.2%",
-        responseTime: "120ms",
-        icon: Phone,
-        description: "Hospital phone and paging system",
-        lastIncident: "Extension issues ongoing",
-      },
-      {
-        name: "Security Systems",
-        status: "operational",
-        uptime: "99.7%",
-        responseTime: "25ms",
-        icon: Shield,
-        description: "Access control and surveillance",
-        lastIncident: "Camera offline 1 day ago",
-      },
-      {
-        name: "Backup Systems",
-        status: "outage",
-        uptime: "95.1%",
-        responseTime: "N/A",
-        icon: Server,
-        description: "Data backup and recovery systems",
-        lastIncident: "Backup failure - under repair",
-      },
-    ],
-    metrics: {
-      totalUsers: 1247,
-      activeConnections: 892,
-      serverLoad: 67,
-      diskUsage: 78,
-      memoryUsage: 82,
-      networkTraffic: "2.4 GB/s",
-    },
-    recentAlerts: [
-      {
-        id: 1,
-        type: "critical",
-        message: "Backup system failure detected",
-        timestamp: "2024-01-18 14:30",
-        service: "Backup Systems",
-      },
-      {
-        id: 2,
-        type: "warning",
-        message: "Phone system experiencing delays",
-        timestamp: "2024-01-18 12:15",
-        service: "Phone System",
-      },
-      {
-        id: 3,
-        type: "info",
-        message: "Scheduled maintenance completed",
-        timestamp: "2024-01-18 09:00",
-        service: "Email System",
-      },
-    ],
-  })
+  const iconMap = {
+    Wifi,
+    Server,
+    Database,
+    Mail,
+    Phone,
+    Shield,
+    Monitor
+  };
 
-  const handleRefresh = () => {
-    setIsRefreshing(true)
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
 
-    // Simulate API call to refresh status
-    setTimeout(() => {
-      setLastUpdated(new Date())
-      setIsRefreshing(false)
-    }, 2000)
-  }
+    const MIN_DELAY = 1000;
+    const startTime = Date.now();
+
+    try {
+      useSystemStatusStore.getState().subscribeSystemStatuses();
+      useSystemStatusStore.getState().subscribeStats();
+      useSystemStatusStore.getState().subscribeRecentAlerts();
+
+      setLastUpdated(new Date());
+    } catch (error) {
+      console.error("Error refreshing data:", error);
+    } finally {
+      const elapsed = Date.now() - startTime;
+      const remaining = Math.max(MIN_DELAY - elapsed, 0);
+
+      setTimeout(() => {
+        setIsRefreshing(false);
+      }, remaining);
+    }
+  };
+
+
+
+  const getOverallSystemStatusPercentage = (systems) => {
+    if (!systems || systems.length === 0) return "Unknown";
+
+    const total = systems.length;
+    const operationalCount = systems.filter(s => s.status === "operational").length;
+    const percentage = (operationalCount / total) * 100;
+
+    if (percentage >= 90) return "Operational";
+    if (percentage >= 70) return "Degraded";
+    return "Outage";
+  };
+  const overallStatus = getOverallSystemStatusPercentage(systems);
+
+  const operationalCount = systems.filter((s) => s.status === "operational").length;
+  const totalCount = systems.length;
 
   const getStatusBadge = (status) => {
     const statusConfig = {
@@ -139,16 +91,19 @@ export default function SystemStatusContent() {
       outage: { color: "bg-red-100 text-red-800 border-red-200", icon: XCircle },
     }
 
-    const config = statusConfig[status]
+    const config = statusConfig[status?.toLowerCase()]
+      || { color: "bg-gray-100 text-gray-800 border-gray-200", icon: AlertCircle }
+
     const Icon = config.icon
 
     return (
       <Badge className={`${config.color} flex items-center space-x-1 px-2 py-1`}>
         <Icon className="w-3 h-3" />
-        <span className="capitalize">{status}</span>
+        <span className="capitalize">{status || "Unknown"}</span>
       </Badge>
     )
   }
+
 
   const getAlertIcon = (type) => {
     switch (type) {
@@ -222,16 +177,15 @@ export default function SystemStatusContent() {
           <CardContent>
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-4">
-                <div className={`text-2xl font-bold ${getOverallStatusColor(systemStatus.overall)}`}>
-                  {systemStatus.overall.charAt(0).toUpperCase() + systemStatus.overall.slice(1)}
+                <div className={`text-2xl font-bold ${getOverallStatusColor(overallStatus)}`}>
+                  {overallStatus.charAt(0).toUpperCase() + overallStatus.slice(1)}
                 </div>
-                {getStatusBadge(systemStatus.overall)}
+                {getStatusBadge(overallStatus)}
               </div>
               <div className="text-right">
                 <div className="text-sm text-gray-600">Services Operational</div>
                 <div className="text-lg font-semibold text-gray-800">
-                  {systemStatus.services.filter((s) => s.status === "operational").length} /{" "}
-                  {systemStatus.services.length}
+                  {operationalCount} / {totalCount}
                 </div>
               </div>
             </div>
@@ -248,8 +202,8 @@ export default function SystemStatusContent() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-blue-600">{systemStatus.metrics.activeConnections}</div>
-              <div className="text-sm text-gray-600">of {systemStatus.metrics.totalUsers} total</div>
+              <div className="text-2xl font-bold text-blue-600">{stats.activeUsers}</div>
+              <div className="text-sm text-gray-600">of {stats.totalUsers} total</div>
             </CardContent>
           </Card>
 
@@ -261,7 +215,7 @@ export default function SystemStatusContent() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-green-600">{systemStatus.metrics.serverLoad}%</div>
+              <div className="text-2xl font-bold text-green-600">{stats.serverLoad}%</div>
               <div className="text-sm text-gray-600">CPU utilization</div>
             </CardContent>
           </Card>
@@ -274,7 +228,7 @@ export default function SystemStatusContent() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-orange-600">{systemStatus.metrics.memoryUsage}%</div>
+              <div className="text-2xl font-bold text-orange-600">{stats.memoryUsage}%</div>
               <div className="text-sm text-gray-600">RAM utilization</div>
             </CardContent>
           </Card>
@@ -287,7 +241,7 @@ export default function SystemStatusContent() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-purple-600">{systemStatus.metrics.diskUsage}%</div>
+              <div className="text-2xl font-bold text-purple-600">{stats.diskUsage}%</div>
               <div className="text-sm text-gray-600">Storage utilization</div>
             </CardContent>
           </Card>
@@ -304,8 +258,8 @@ export default function SystemStatusContent() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {systemStatus.services.map((service, index) => {
-                  const Icon = service.icon
+                {systems.map((service, index) => {
+                  const Icon = iconMap[service.icon] || Wifi;
                   return (
                     <div key={index} className="bg-gray-50 rounded-lg p-4 border border-gray-200">
                       <div className="flex items-start justify-between mb-2">
@@ -332,7 +286,7 @@ export default function SystemStatusContent() {
                         </div>
                         <div>
                           <span className="text-gray-600">Last Incident:</span>
-                          <div className="font-medium text-gray-800 text-xs">{service.lastIncident}</div>
+                          <div className="font-medium text-gray-800 text-xs">{service.lastIncident?.description}</div>
                         </div>
                       </div>
                     </div>
@@ -352,7 +306,7 @@ export default function SystemStatusContent() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {systemStatus.recentAlerts.map((alert) => (
+                {recentAlerts.map((alert) => (
                   <Alert key={alert.id} className={getAlertColor(alert.type)}>
                     {getAlertIcon(alert.type)}
                     <AlertDescription>
@@ -378,7 +332,7 @@ export default function SystemStatusContent() {
                 <div className="bg-gray-50 rounded-lg p-4">
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-gray-600">Current Traffic:</span>
-                    <span className="font-medium text-gray-800">{systemStatus.metrics.networkTraffic}</span>
+                    <span className="font-medium text-gray-800">{stats.networkTraffic}</span>
                   </div>
                   <div className="mt-2 bg-gray-200 rounded-full h-2">
                     <div className="bg-green-500 h-2 rounded-full" style={{ width: "65%" }}></div>

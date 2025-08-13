@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -24,15 +24,35 @@ export default function SubmitTicketContent() {
     })
     const [message, setMessage] = useState(null)
     const [isSubmitting, setIsSubmitting] = useState(false)
+    const [touched, setTouched] = useState({})
 
-    const { createTicket } = useTicketStore();
-    const { user } = useAuthStore();
+    const messageRef = useRef(null)
+    const { createTicket } = useTicketStore()
+    const { user } = useAuthStore()
 
-
+    useEffect(() => {
+        if (message && messageRef.current) {
+            messageRef.current.scrollIntoView({ behavior: "smooth", block: "start" })
+        }
+    }, [message])
 
     const handleSubmit = async (e) => {
-        e.preventDefault();
-        setIsSubmitting(true);
+        e.preventDefault()
+
+        setTouched({
+            department: true,
+            priority: true,
+        })
+
+        if (!formData.department || !formData.priority) {
+            setMessage({
+                type: "error",
+                text: "Please select Department and Priority before submitting.",
+            })
+            return
+        }
+
+        setIsSubmitting(true)
 
         try {
             const ticketPayload = {
@@ -40,36 +60,41 @@ export default function SubmitTicketContent() {
                 submittedBy: user?.name || "Unknown",
                 submittedByEmail: user?.email || "unknown@hospital.com",
                 department: formData.department || user?.department || "General",
-            };
-            await createTicket(ticketPayload, formData.attachments);
+            }
+
+            await createTicket(ticketPayload, formData.attachments)
 
             setMessage({
                 type: "success",
                 text: "Ticket submitted successfully! You will receive a confirmation email shortly.",
-            });
+            })
 
             setFormData({
                 title: "",
                 description: "",
                 priority: "",
                 department: "",
-                attachments: []
-            });
+                attachments: [],
+            })
+            setTouched({})
         } catch (error) {
-            console.error("Ticket submission failed:", error);
+            console.error("Ticket submission failed:", error)
             setMessage({
                 type: "error",
                 text: "Failed to submit the ticket. Please try again later.",
-            });
+            })
         } finally {
-            setIsSubmitting(false);
+            setIsSubmitting(false)
         }
-    };
-
+    }
 
     const handleInputChange = (field, value) => {
         setFormData((prev) => ({ ...prev, [field]: value }))
     }
+
+    const getSelectClass = (field) =>
+        `h-11 border ${touched[field] && !formData[field] ? "border-red-500" : "border-gray-300"
+        } focus:border-blue-500 focus:ring-blue-500`
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-blue-50 to-green-50">
@@ -146,6 +171,31 @@ export default function SubmitTicketContent() {
 
                             <CardContent>
                                 <form onSubmit={handleSubmit} className="space-y-6">
+                                    {message && (
+                                        <Alert
+                                            ref={messageRef}
+                                            className={`${message.type === "success"
+                                                    ? "border-green-200 bg-green-50"
+                                                    : "border-red-200 bg-red-50"
+                                                }`}
+                                        >
+                                            {message.type === "success" ? (
+                                                <CheckCircle className="h-4 w-4 text-green-600" />
+                                            ) : (
+                                                <AlertCircle className="h-4 w-4 text-red-600" />
+                                            )}
+                                            <AlertDescription
+                                                className={
+                                                    message.type === "success"
+                                                        ? "text-green-800"
+                                                        : "text-red-800"
+                                                }
+                                            >
+                                                {message.text}
+                                            </AlertDescription>
+                                        </Alert>
+                                    )}
+
                                     <div className="space-y-2">
                                         <Label htmlFor="title" className="text-sm font-medium text-gray-700">
                                             Issue Title *
@@ -169,7 +219,7 @@ export default function SubmitTicketContent() {
                                             value={formData.department}
                                             onValueChange={(value) => handleInputChange("department", value)}
                                         >
-                                            <SelectTrigger className="h-11 border-gray-300 focus:border-blue-500 focus:ring-blue-500">
+                                            <SelectTrigger className={getSelectClass("department")}>
                                                 <SelectValue placeholder="Select department" />
                                             </SelectTrigger>
                                             <SelectContent>
@@ -199,7 +249,7 @@ export default function SubmitTicketContent() {
                                             Priority Level *
                                         </Label>
                                         <Select value={formData.priority} onValueChange={(value) => handleInputChange("priority", value)}>
-                                            <SelectTrigger className="h-11 border-gray-300 focus:border-blue-500 focus:ring-blue-500">
+                                            <SelectTrigger className={getSelectClass("priority")}>
                                                 <SelectValue placeholder="Select priority level" />
                                             </SelectTrigger>
                                             <SelectContent>
@@ -271,21 +321,6 @@ export default function SubmitTicketContent() {
                                         </Button>
                                     </div>
                                 </form>
-
-                                {message && (
-                                    <Alert
-                                        className={`mt-6 ${message.type === "success" ? "border-green-200 bg-green-50" : "border-red-200 bg-red-50"}`}
-                                    >
-                                        {message.type === "success" ? (
-                                            <CheckCircle className="h-4 w-4 text-green-600" />
-                                        ) : (
-                                            <AlertCircle className="h-4 w-4 text-red-600" />
-                                        )}
-                                        <AlertDescription className={message.type === "success" ? "text-green-800" : "text-red-800"}>
-                                            {message.text}
-                                        </AlertDescription>
-                                    </Alert>
-                                )}
                             </CardContent>
                         </Card>
                     </div>

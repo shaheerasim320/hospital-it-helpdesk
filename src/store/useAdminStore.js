@@ -1,11 +1,12 @@
 import { create } from "zustand";
-import { db } from "@/app/lib/firebase";
+
 import {
   collection,
   getDocs,
   updateDoc,
   doc,
 } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 
 const useAdminStore = create((set, get) => ({
   staff: [],

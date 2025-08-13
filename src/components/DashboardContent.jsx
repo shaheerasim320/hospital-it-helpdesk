@@ -6,33 +6,13 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { FileText, Clipboard, Monitor, Stethoscope, Shield, Users, AlertCircle, Clock, CheckCircle } from "lucide-react"
 import Navbar from "./navbar"
-import { useEffect, useState } from "react"
-import { useRouter } from "next/navigation"
+import { useState } from "react"
 import useAuthStore from "@/store/useAuthStore"
 import useTicketStore from "@/store/useTicketStore"
 
 export default function DashboardContent() {
     const { user } = useAuthStore();
-    const { fetchRecentTickets, recentTickets, assignedTickets, subscribeAssignedTickets, unsubscribeAssignedTickets, openTickets, subscribeOpenTickets, unsubscribeOpenTickets } = useTicketStore();
-    // const [assignedTickets, setAssignedTickets] = useState([])
-    const [ticketStats, setTicketStats] = useState({ open: 0, inProgress: 0, resolved: 0 })
-    const router = useRouter()
-
-    useEffect(() => {
-        if (user) {
-            if (user?.role === "IT Support") {
-                subscribeAssignedTickets(user.id)
-                subscribeOpenTickets()
-                fetchTicketStats()
-            } else {
-                fetchRecentTickets(user?.email)
-            }
-        }
-        return () => {
-            unsubscribeAssignedTickets()
-            unsubscribeOpenTickets()
-        }
-    }, [user])
+    const { recentTickets, assignedTickets,ticketStats } = useTicketStore()
 
     const getQuickActions = (role) => {
         if (role === "IT Support") {
@@ -90,6 +70,7 @@ export default function DashboardContent() {
             radiology: "Radiology",
             cardiology: "Cardiology",
             neurology: "Neurology",
+            nursing:"Nursing",
             oncology: "Oncology",
             orthopedics: "Orthopedics",
             pediatrics: "Pediatrics",
@@ -106,54 +87,6 @@ export default function DashboardContent() {
 
         return departments[departmentValue] || "Unknown Department";
     };
-
-    const fetchAssignedTickets = async (email) => {
-        try {
-            const mockData = [
-                {
-                    id: "TK-001",
-                    subject: "Computer won't start in Room 302",
-                    priority: "high",
-                    submittedBy: "Dr. Sarah Johnson",
-                    department: "Emergency Medicine",
-                    date: "2025-08-02",
-                },
-                {
-                    id: "TK-003",
-                    subject: "Network connectivity issues",
-                    priority: "medium",
-                    submittedBy: "Jennifer Adams",
-                    department: "ICU",
-                    date: "2025-08-01",
-                },
-                {
-                    id: "TK-005",
-                    subject: "Printer offline in Radiology",
-                    priority: "low",
-                    submittedBy: "Dr. Mark Stevens",
-                    department: "Radiology",
-                    date: "2025-07-31",
-                },
-            ]
-            // setAssignedTickets(mockData)
-        } catch (err) {
-            console.error("Failed to fetch assigned tickets:", err)
-        }
-    }
-
-    const fetchTicketStats = async () => {
-        try {
-            const res = await fetch("/api/fetch-tickets-stats");
-            if (!res.ok) setTicketStats({ open: 0, inProgress: 0, resolved: 0 })
-
-            const stats = await res.json();
-            // Now stats = { open: X, inProgress: Y, resolvedToday: Z }
-            setTicketStats(stats);  // or however you store in Zustand / React state
-        } catch (err) {
-            console.error(err);
-        }
-
-    }
 
     const getPriorityBadge = (priority) => {
         const colors = {

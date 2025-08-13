@@ -87,6 +87,7 @@ export default function AdminDashboard() {
       radiology: "Radiology",
       cardiology: "Cardiology",
       neurology: "Neurology",
+      nursing:"Nursing",
       oncology: "Oncology",
       orthopedics: "Orthopedics",
       pediatrics: "Pediatrics",
@@ -136,7 +137,7 @@ export default function AdminDashboard() {
   const handleApproveUser = async (userId) => {
     setApprovingUserId(userId);
     try {
-      const res = await fetch("/api/approve-user", {
+      const res = await fetch("/api/users/approve-user", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ userId }),
@@ -161,7 +162,7 @@ export default function AdminDashboard() {
   const handleRejectUser = async (userId) => {
     setRejectingUserId(userId);
     try {
-      const res = await fetch("/api/reject-user", {
+      const res = await fetch("/api/users/reject-user", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ userId }),

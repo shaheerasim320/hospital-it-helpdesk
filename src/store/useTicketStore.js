@@ -12,8 +12,8 @@ import {
   limit,
   onSnapshot,
 } from "firebase/firestore";
-import { db } from "@/app/lib/firebase";
-import { uploadFilesToCloudinary } from "@/app/utils/uploadFilesToCloudinary";
+import { db } from "@/lib/firebase";
+import { uploadFilesToCloudinary } from "@/utils/uploadFilesToCloudinary";
 
 const useTicketStore = create((set, get) => ({
   tickets: [],
@@ -22,6 +22,8 @@ const useTicketStore = create((set, get) => ({
   recentTickets: [],
   assignedTickets: [],
   openTickets: [],
+  myTickets: [],
+  ticketStats: { open: 0, inProgress: 0, resolved: 0 },
 
   fetchTickets: async () => {
     set({ loading: true, error: null });
@@ -87,7 +89,7 @@ const useTicketStore = create((set, get) => ({
         ],
       }));
 
-      await fetch("/api/send-ticket-email", {
+      await fetch("/api/tickets/send-ticket-email", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -112,8 +114,7 @@ const useTicketStore = create((set, get) => ({
       const ticketRef = doc(db, "tickets", ticketId);
       await updateDoc(ticketRef, {
         status,
-        updatedAt: serverTimestamp(),
-        lastUpdated: new Date().toISOString().split("T")[0],
+        lastUpdated: new Date().toISOString()
       });
 
       set((state) => ({
@@ -131,8 +132,7 @@ const useTicketStore = create((set, get) => ({
       const ticketRef = doc(db, "tickets", ticketId);
       await updateDoc(ticketRef, {
         assignedTo: assigneeUid,
-        updatedAt: serverTimestamp(),
-        lastUpdated: new Date().toISOString().split("T")[0],
+        lastUpdated: new Date().toISOString()
       });
 
       set((state) => ({
@@ -162,8 +162,7 @@ const useTicketStore = create((set, get) => ({
 
       await updateDoc(ticketRef, {
         comments: updatedComments,
-        updatedAt: serverTimestamp(),
-        lastUpdated: new Date().toISOString().split("T")[0],
+        lastUpdated: new Date().toISOString()
       });
 
       set((state) => ({
@@ -249,7 +248,87 @@ const useTicketStore = create((set, get) => ({
       get().openTicketsUnsubscribe();
       set({ openTicketsUnsubscribe: null });
     }
-  }
+  },
+
+
+  subscribeMyTickets: (email) => {
+    if (get().myTicketsUnsubscribe) {
+      get().myTicketsUnsubscribe();
+    }
+
+    const ticketsCol = collection(db, "tickets");
+    const q = query(
+      ticketsCol,
+      where("submittedByEmail", "==", email),
+      orderBy("dateSubmitted", "desc")
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const tickets = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      set({ myTickets: tickets });
+    }, (error) => {
+      console.error("Error fetching my tickets:", error);
+      set({ error: "Failed to load my tickets" });
+    });
+
+    set({ myTicketsUnsubscribe: unsubscribe });
+  },
+
+  unsubscribeMyTickets: () => {
+    if (get().myTicketsUnsubscribe) {
+      get().myTicketsUnsubscribe();
+      set({ myTicketsUnsubscribe: null });
+    }
+  },
+
+  subscribeTicketStats: () => {
+    if (get().ticketStatsUnsubscribe) {
+      get().ticketStatsUnsubscribe();
+    }
+
+    const ticketsCol = collection(db, "tickets");
+
+    const unsubscribe = onSnapshot(ticketsCol, (snapshot) => {
+      const allTickets = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
+
+      const todayEnd = new Date();
+      todayEnd.setHours(23, 59, 59, 999);
+
+      const stats = {
+        open: allTickets.filter(t => t.status === "open").length,
+        inProgress: allTickets.filter(t => t.status === "in-progress").length,
+        resolved: allTickets.filter(t => {
+          const updatedDate = t.lastUpdated instanceof Date
+            ? t.lastUpdated
+            : new Date(t.lastUpdated);
+
+          return (
+            t.status === "resolved" &&
+            updatedDate >= todayStart &&
+            updatedDate <= todayEnd
+          );
+        }).length
+      };
+
+      set({ ticketStats: stats });
+    }, (error) => {
+      console.error("Error fetching ticket stats:", error);
+      set({ error: "Failed to load ticket stats" });
+    });
+
+    set({ ticketStatsUnsubscribe: unsubscribe });
+  },
+
+  unsubscribeTicketStats: () => {
+    if (get().ticketStatsUnsubscribe) {
+      get().ticketStatsUnsubscribe();
+      set({ ticketStatsUnsubscribe: null });
+    }
+  },
+
 
 }));
 

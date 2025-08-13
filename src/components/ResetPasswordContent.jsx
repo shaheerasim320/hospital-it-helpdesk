@@ -9,6 +9,8 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Monitor, Lock, ArrowLeft, CheckCircle, AlertCircle, Shield, Eye, EyeOff, Key, Clock } from "lucide-react"
+import { confirmPasswordReset, verifyPasswordResetCode } from "firebase/auth"
+import { auth } from "@/lib/firebase"
 
 export default function ResetPasswordContent() {
   const router = useRouter()
@@ -24,57 +26,38 @@ export default function ResetPasswordContent() {
   const [tokenValid, setTokenValid] = useState(null)
   const [isSuccess, setIsSuccess] = useState(false)
   const [timeRemaining, setTimeRemaining] = useState(null)
+  const [email, setEmail] = useState("")
 
-  const token = searchParams.get("token")
-  const email = searchParams.get("email")
+  const token = searchParams.get("oobCode")
 
   useEffect(() => {
-    if (!token || !email) {
-      setTokenValid(false)
+    if (!token) {
+      setTokenValid(false);
       setMessage({
         type: "error",
         text: "Invalid or missing reset link. Please request a new password reset.",
-      })
-      return
+      });
+      return;
     }
 
-    // Simulate token validation (in real app, this would be an API call)
-    setTimeout(() => {
-      // For demo purposes, let's simulate token expiration
-      const tokenAge = Math.random() * 20 // Random age in minutes
-      if (tokenAge > 15) {
-        setTokenValid(false)
+    // Verify the code with Firebase and get the email
+    const fetchEmail = async () => {
+      try {
+        const emailFromCode = await verifyPasswordResetCode(auth, token);
+        setEmail(emailFromCode);
+        setTokenValid(true);
+      } catch (error) {
+        console.error(error);
+        setTokenValid(false);
         setMessage({
           type: "error",
-          text: "This password reset link has expired. Please request a new one.",
-        })
-      } else {
-        setTokenValid(true)
-        setTimeRemaining(Math.ceil(15 - tokenAge))
+          text: "This password reset link is invalid or has expired. Please request a new one.",
+        });
       }
-    }, 1000)
-  }, [token, email])
+    };
 
-  // Countdown timer for token expiration
-  useEffect(() => {
-    if (timeRemaining && timeRemaining > 0) {
-      const timer = setInterval(() => {
-        setTimeRemaining((prev) => {
-          if (prev <= 1) {
-            setTokenValid(false)
-            setMessage({
-              type: "error",
-              text: "This password reset link has expired. Please request a new one.",
-            })
-            return 0
-          }
-          return prev - 1
-        })
-      }, 60000) // Update every minute
-
-      return () => clearInterval(timer)
-    }
-  }, [timeRemaining])
+    fetchEmail();
+  }, [token]);
 
   const validatePassword = (password) => {
     const minLength = password.length >= 8
@@ -119,16 +102,27 @@ export default function ResetPasswordContent() {
       return
     }
 
-    // Simulate API call to reset password
-    setTimeout(() => {
-      // In real app, this would make an API call with token, email, and new password
+
+    const queryParams = new URLSearchParams(window.location.search);
+    const oobCode = queryParams.get("oobCode");
+
+    try {
+      await confirmPasswordReset(auth, oobCode, formData.password);
       setMessage({
         type: "success",
         text: "Your password has been reset successfully! You can now sign in with your new password.",
       })
       setIsSuccess(true)
       setIsSubmitting(false)
-    }, 2000)
+    } catch (err) {
+      console.error("Password reset failed:", err)
+      setMessage({
+        type: "error",
+        text: "Failed to reset password. Please try again or request a new reset link.",
+      })
+      setIsSubmitting(false)
+    }
+
   }
 
   const handleInputChange = (field, value) => {
@@ -223,7 +217,7 @@ export default function ResetPasswordContent() {
   // Invalid token state
   if (tokenValid === false) {
     return (
-      <Card className="w-full max-w-md shadow-xl border-0">
+      <Card className="w-full min-h-lvh shadow-xl border-0 flex flex-col justify-center">
         <CardHeader className="space-y-4 pb-6 text-center">
           <div className="flex items-center justify-center mb-4">
             <div className="w-16 h-16 bg-red-500 rounded-full flex items-center justify-center">
@@ -238,13 +232,13 @@ export default function ResetPasswordContent() {
 
         <CardContent className="space-y-6">
           {message && (
-            <Alert className="border-red-200 bg-red-50">
+            <Alert className="border-red-200 bg-red-50 max-w-fit mx-auto">
               <AlertCircle className="h-4 w-4 text-red-600" />
               <AlertDescription className="text-red-800">{message.text}</AlertDescription>
             </Alert>
           )}
 
-          <div className="space-y-3">
+          <div className="space-y-3 max-w-fit mx-auto">
             <Link href="/forgot-password">
               <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white">Request New Reset Link</Button>
             </Link>
@@ -264,7 +258,7 @@ export default function ResetPasswordContent() {
   // Loading state
   if (tokenValid === null) {
     return (
-      <Card className="w-full max-w-md shadow-xl border-0">
+      <Card className="w-full min-h-lvh shadow-xl border-0 flex flex-col justify-center">
         <CardContent className="flex flex-col items-center justify-center py-12">
           <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4"></div>
           <p className="text-gray-600">Validating reset link...</p>
@@ -309,8 +303,8 @@ export default function ResetPasswordContent() {
               <span>Secure Reset</span>
             </div>
             <div className="flex items-center space-x-2">
-              <Clock className="w-4 h-4" />
-              <span>{timeRemaining} min left</span>
+              <Shield className="w-4 h-4" />
+              <span>Use a strong, unique password</span>
             </div>
           </div>
         </div>
@@ -338,17 +332,6 @@ export default function ResetPasswordContent() {
                 <strong>Resetting password for:</strong> {email}
               </p>
             </div>
-
-            {/* Time Warning */}
-            {timeRemaining && timeRemaining <= 5 && (
-              <Alert className="border-orange-200 bg-orange-50">
-                <Clock className="h-4 w-4 text-orange-600" />
-                <AlertDescription className="text-orange-800">
-                  <strong>Hurry!</strong> This reset link expires in {timeRemaining} minute
-                  {timeRemaining !== 1 ? "s" : ""}.
-                </AlertDescription>
-              </Alert>
-            )}
 
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">

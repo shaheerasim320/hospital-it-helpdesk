@@ -30,10 +30,10 @@ import {
 } from "lucide-react"
 import Navbar from "./navbar"
 import { collection, getDoc, getDocs, query, where } from "firebase/firestore"
-import { db } from "@/app/lib/firebase"
 import useAdminStore from "@/store/useAdminStore"
 import useTicketStore from "@/store/useTicketStore"
 import useAuthStore from "@/store/useAuthStore"
+import { db } from "@/lib/firebase"
 
 export default function TicketDetailsContent() {
   const router = useRouter()
@@ -49,7 +49,7 @@ export default function TicketDetailsContent() {
   const [newComment, setNewComment] = useState("")
   const [isSubmittingComment, setIsSubmittingComment] = useState(false)
   const [message, setMessage] = useState(null)
-  const { addComment } = useTicketStore()
+  const { addComment, assignTicket, updateTicketStatus } = useTicketStore()
 
   useEffect(() => {
     if (!ticketId) {
@@ -84,7 +84,6 @@ export default function TicketDetailsContent() {
       </div>
     );
   }
-
 
   const agents = staff.filter((user) => user.status === "approved" && (user.role === "it" || user.role === "admin"))
 
@@ -121,38 +120,49 @@ export default function TicketDetailsContent() {
     return <Badge className={`${priorityColors[priority]} capitalize px-3 py-1`}>{priority}</Badge>
   }
 
-  const handleStatusChange = (newStatus) => {
-    setTicket({ ...ticket, status: newStatus, lastUpdated: new Date().toISOString()})
-
-    const systemComment = {
-      id: comments.length + 1,
-      author: "System",
-      authorRole: "system",
-      content: `Ticket status changed to ${newStatus.replace("-", " ")}.`,
-      timestamp: new Date().toISOString(),
-      type: "system",
+  const handleStatusChange = async (newStatus) => {
+    try {
+      await updateTicketStatus(ticket.id, newStatus)
+      setTicket({ ...ticket, status: newStatus, lastUpdated: new Date().toISOString() })
+      const systemComment = {
+        id: comments.length + 1,
+        author: "System",
+        authorRole: "system",
+        content: `Ticket status changed to ${newStatus.replace("-", " ")}.`,
+        timestamp: new Date().toISOString(),
+        type: "system",
+      }
+      await addComment(ticket.id, systemComment)
+      setComments([...comments, systemComment])
+      showToast("success", `Ticket status updated to ${newStatus.replace("-", " ")}.`)
+    } catch (error) {
+      console.error("Error updating ticket status:", error);
+      showToast("error", "Failed to update ticket status.");
     }
-    setComments([...comments, systemComment])
-
-    showToast("success", `Ticket status updated to ${newStatus.replace("-", " ")}.`)
   }
 
-  const handleAssignTicket = (agentId) => {
-    const agent = agents.find((a) => a.id === Number.parseInt(agentId))
-    setTicket({ ...ticket, assignedTo: agent ? agent.name : null, lastUpdated: new Date().toISOString()})
-
-    const systemComment = {
-      id: comments.length + 1,
-      author: "System",
-      authorRole: "system",
-      content: agent ? `Ticket assigned to ${agent.name}.` : "Ticket unassigned.",
-      timestamp: new Date().toISOString(),
-      type: "system",
+  const handleAssignTicket = async (agentId) => {
+    const agent = staff.find((u) => u.id === agentId)
+    setTicket({ ...ticket, assignedTo: agent ? agent.id : null, lastUpdated: new Date().toISOString() })
+    try {
+      await assignTicket(ticket.id, agentId)
+      showToast("success", `Ticket ${ticket.ticketId} has been assigned to ${agent ? agent.name : "Unassigned"}.`)
+      const systemComment = {
+        id: comments.length + 1,
+        author: "System",
+        authorRole: "system",
+        content: agent ? `Ticket assigned to ${agent.name}.` : "Ticket unassigned.",
+        timestamp: new Date().toISOString(),
+        type: "system",
+      }
+      await addComment(ticket.id, systemComment)
+      setComments(prev => [...prev, systemComment])
+    } catch (error) {
+      console.error("Error assigning ticket:", err);
+      showToast("error", "Failed to assign the ticket.");
     }
-    setComments([...comments, systemComment])
-
-    showToast("success", agent ? `Ticket assigned to ${agent.name}.` : "Ticket unassigned.")
   }
+
 
   const handleAddComment = async () => {
     if (!newComment.trim()) return
@@ -216,6 +226,31 @@ export default function TicketDetailsContent() {
   const formatTimestamp = (timestamp) => {
     return new Date(timestamp).toLocaleString()
   }
+
+  const getDepartmentInfo = (departmentValue) => {
+    const departments = {
+      emergency: "Emergency Medicine",
+      radiology: "Radiology",
+      cardiology: "Cardiology",
+      neurology: "Neurology",
+      nursing:"Nursing",
+      oncology: "Oncology",
+      orthopedics: "Orthopedics",
+      pediatrics: "Pediatrics",
+      pharmacy: "Pharmacy",
+      laboratory: "Laboratory",
+      surgery: "Surgery",
+      icu: "Intensive Care Unit (ICU)",
+      it: "Information Technology (IT)",
+      hr: "Human Resources (HR)",
+      administration: "Administration",
+      facilities: "Facilities & Maintenance",
+      billing: "Billing & Insurance",
+    };
+
+    return departments[departmentValue] || "Unknown Department";
+  };
+
 
   const getAuthorBadgeColor = (role) => {
     const colors = {
@@ -298,7 +333,7 @@ export default function TicketDetailsContent() {
                     <Building className="w-5 h-5 text-gray-400" />
                     <div>
                       <p className="text-sm font-medium text-gray-700">Department</p>
-                      <p className="text-gray-600">{ticket?.department}</p>
+                      <p className="text-gray-600">{getDepartmentInfo(ticket?.department)}</p>
                     </div>
                   </div>
 
@@ -474,14 +509,17 @@ export default function TicketDetailsContent() {
                   <div>
                     <Label className="text-sm font-medium text-gray-700 mb-2 block">Assign Agent</Label>
                     <Select
-                      value={
-                        ticket?.assignedTo ? agents.find((a) => a.name === ticket?.assignedTo)?.id.toString() || "0" : "0"
-                      }
+                      value={ticket?.assignedTo?.toString() || "0"}
                       onValueChange={handleAssignTicket}
                     >
                       <SelectTrigger className="border-gray-300 focus:border-blue-500 focus:ring-blue-500">
-                        <SelectValue placeholder="Select agent" />
+                        <SelectValue>
+                          {ticket?.assignedTo
+                            ? agents.find((a) => a.id.toString() === ticket.assignedTo.toString())?.name || "Unknown agent"
+                            : "Select agent"}
+                        </SelectValue>
                       </SelectTrigger>
+
                       <SelectContent>
                         <SelectItem value="0">Unassigned</SelectItem>
                         {agents.map((agent) => (
@@ -497,7 +535,7 @@ export default function TicketDetailsContent() {
             )}
 
             {/* IT Support Actions */}
-            {user?.role === "IT Support" && ticket.assignedTo===user?.id && (
+            {user?.role === "IT Support" && ticket.assignedTo === user?.id && (
               <Card className="shadow-lg border-0">
                 <CardHeader>
                   <CardTitle className="text-lg font-semibold text-gray-800 flex items-center">

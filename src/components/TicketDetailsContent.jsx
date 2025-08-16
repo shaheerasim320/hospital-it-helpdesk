@@ -464,10 +464,11 @@ export default function TicketDetailsContent() {
                     value={newComment}
                     onChange={(e) => setNewComment(e.target.value)}
                     className="min-h-20 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                    disabled={ticket?.status === "resolved"}
                   />
                   <Button
                     onClick={handleAddComment}
-                    disabled={isSubmittingComment || !newComment.trim()}
+                    disabled={isSubmittingComment || !newComment.trim() || ticket?.status === "resolved"}
                     className="bg-blue-600 hover:bg-blue-700 text-white"
                   >
                     <Send className="w-4 h-4 mr-2" />
@@ -481,7 +482,7 @@ export default function TicketDetailsContent() {
           {/* Sidebar */}
           <div className="space-y-6">
             {/* Admin Actions */}
-            {user?.role === "Admin" && (
+            {user?.role === "Admin" && ticket.status!=="resolved" && (
               <Card className="shadow-lg border-0">
                 <CardHeader>
                   <CardTitle className="text-lg font-semibold text-gray-800 flex items-center">
@@ -535,7 +536,7 @@ export default function TicketDetailsContent() {
             )}
 
             {/* IT Support Actions */}
-            {user?.role === "IT Support" && ticket.assignedTo === user?.id && (
+            {user?.role === "IT Support" && ticket.assignedTo === user?.id && ticket.status!=="resolved" && (
               <Card className="shadow-lg border-0">
                 <CardHeader>
                   <CardTitle className="text-lg font-semibold text-gray-800 flex items-center">

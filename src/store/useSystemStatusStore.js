@@ -25,6 +25,38 @@ const useSystemStatusStore = create((set, get) => ({
   loading: false,
   error: null,
 
+  resetStore: () => {
+    const {
+      systemStatusesUnsubscribe,
+      activeSystemsUnsubscribe,
+      statsUnsubscribe,
+      alertsUnsubscribe
+    } = get();
+    if (systemStatusesUnsubscribe) systemStatusesUnsubscribe();
+    if (activeSystemsUnsubscribe) activeSystemsUnsubscribe(); 
+    if (statsUnsubscribe) statsUnsubscribe();
+    if (alertsUnsubscribe) alertsUnsubscribe();
+    set({
+      systems: [],
+      activeSystems: [],
+      recentAlerts: [],
+      stats: {
+        totalUsers: 0,
+        activeUsers: 0,
+        serverLoad: 67,
+        memoryUsage: 82,
+        diskUsage: 78,
+        networkTraffic: "2.4 GB/s"
+      },
+      loading: false,
+      error: null,
+      systemStatusesUnsubscribe: null,
+      activeSystemsUnsubscribe: null,
+      statsUnsubscribe: null,
+      alertsUnsubscribe: null
+    });
+  },
+
   subscribeSystemStatuses: () => {
     if (get().systemStatusesUnsubscribe) {
       get().systemStatusesUnsubscribe();
@@ -98,10 +130,10 @@ const useSystemStatusStore = create((set, get) => ({
           stats: {
             totalUsers,
             activeUsers,
-            serverLoad: 67,     
-            memoryUsage: 82,    
+            serverLoad: 67,
+            memoryUsage: 82,
             diskUsage: 78,
-            networkTraffic: "2.4 GB/s"       
+            networkTraffic: "2.4 GB/s"
           }
         });
       },

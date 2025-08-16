@@ -467,6 +467,7 @@ export default function AdminDashboard() {
                             <Select
                               value={ticket.status}
                               onValueChange={(newStatus) => handleStatusChange(ticket.id, newStatus)}
+                              disabled={ticket.status === "resolved"}
                             >
                               <SelectTrigger className="h-8 text-sm">
                                 <SelectValue />
@@ -489,6 +490,7 @@ export default function AdminDashboard() {
                                   : "0"
                               }
                               onValueChange={(agentId) => handleAssignTicket(ticket.id, agentId)}
+                              disabled={ticket.status === "resolved"}
                             >
                               <SelectTrigger className="h-8 text-sm">
                                 <SelectValue placeholder="Select agent" />

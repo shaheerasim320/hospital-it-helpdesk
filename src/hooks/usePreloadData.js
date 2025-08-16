@@ -4,8 +4,9 @@ import { useEffect } from "react"
 import useTicketStore from "@/store/useTicketStore"
 import useAdminStore from "@/store/useAdminStore"
 import useSystemStatusStore from "@/store/useSystemStatusStore"
+import useAuthStore from "@/store/useAuthStore"
 
-export default function usePreloadData(user) {
+export default function usePreloadData() {
   const {
     fetchTickets,
     fetchRecentTickets,
@@ -19,34 +20,42 @@ export default function usePreloadData(user) {
     unsubscribeTicketStats,
   } = useTicketStore()
 
-  const { subscribeSystemStatuses, unsubscribeSystemStatuses, subscribeStats, unsubscribeStats, subscribeRecentAlerts, unsubscribeRecentAlerts } = useSystemStatusStore()
+  const {
+    subscribeSystemStatuses,
+    unsubscribeSystemStatuses,
+    subscribeStats,
+    unsubscribeStats,
+    subscribeRecentAlerts,
+    unsubscribeRecentAlerts,
+  } = useSystemStatusStore()
 
   const { fetchStaff } = useAdminStore()
+  const { user } = useAuthStore()
 
   useEffect(() => {
     if (!user) return
 
+
     switch (user.role) {
       case "IT Support":
         subscribeOpenTickets()
-        subscribeAssignedTickets(user.id)
+        subscribeAssignedTickets(user.uid)
         subscribeTicketStats()
         subscribeSystemStatuses()
         subscribeStats()
         subscribeRecentAlerts()
-        break;
+        break
 
-      case "Administrator":
+      case "Admin":
         fetchStaff()
         fetchTickets()
-        subscribeAssignedTickets(user.id)
-        break;
+        subscribeAssignedTickets(user.uid)
+        break
 
       default:
         if (user.email) {
           fetchRecentTickets(user.email)
           subscribeMyTickets(user.email)
-
         }
     }
 
@@ -58,7 +67,7 @@ export default function usePreloadData(user) {
       unsubscribeSystemStatuses()
       unsubscribeStats()
       unsubscribeRecentAlerts()
-    };
+    }
   }, [
     user,
     fetchStaff,
@@ -78,5 +87,5 @@ export default function usePreloadData(user) {
     unsubscribeStats,
     subscribeRecentAlerts,
     unsubscribeRecentAlerts,
-  ]);
+  ])
 }

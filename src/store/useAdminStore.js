@@ -12,6 +12,13 @@ const useAdminStore = create((set, get) => ({
   staff: [],
   loading: false,
 
+  resetStore: () => {
+    set({
+      staff: [],
+      loading: false,
+    });
+  },
+
   fetchStaff: async () => {
     set({ loading: true });
     const snapshot = await getDocs(collection(db, "users"));

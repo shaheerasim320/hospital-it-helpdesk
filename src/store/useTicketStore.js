@@ -25,6 +25,40 @@ const useTicketStore = create((set, get) => ({
   myTickets: [],
   ticketStats: { open: 0, inProgress: 0, resolved: 0 },
 
+  openTicketsUnsubscribe: null,
+  assignedTicketsUnsubscribe: null,
+  myTicketsUnsubscribe: null,
+  ticketStatsUnsubscribe: null,
+
+  resetStore: () => {
+    const {
+      openTicketsUnsubscribe,
+      assignedTicketsUnsubscribe,
+      myTicketsUnsubscribe,
+      ticketStatsUnsubscribe
+    } = get();
+
+    if (openTicketsUnsubscribe) openTicketsUnsubscribe();
+    if (assignedTicketsUnsubscribe) assignedTicketsUnsubscribe();
+    if (myTicketsUnsubscribe) myTicketsUnsubscribe();
+    if (ticketStatsUnsubscribe) ticketStatsUnsubscribe();
+
+    set({
+      tickets: [],
+      loading: false,
+      error: null,
+      recentTickets: [],
+      assignedTickets: [],
+      openTickets: [],
+      myTickets: [],
+      ticketStats: { open: 0, inProgress: 0, resolved: 0 },
+      openTicketsUnsubscribe: null,
+      assignedTicketsUnsubscribe: null,
+      myTicketsUnsubscribe: null,
+      ticketStatsUnsubscribe: null,
+    });
+  },
+
   fetchTickets: async () => {
     set({ loading: true, error: null });
     try {
